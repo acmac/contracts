@@ -1,10 +1,10 @@
-pragma solidity 0.5.4;
+pragma solidity ^0.5.4;
 
 import "./Tokens/MogulDAI/MogulDAI.sol";
 import "./Tokens/MogulToken/MogulToken.sol";
 import "./Tokens/MovieToken/MovieToken.sol";
 import "./Math/BondingMathematics.sol";
-import "./../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 
 contract MogulOrganisation {
@@ -28,6 +28,7 @@ contract MogulOrganisation {
     event Invest(address investor, uint256 amount);
     event Withdraw(address investor, uint256 amount);
     event UnlockOrganisation(address unlocker, uint256 initialAmount);
+    event DividendPayed(address payer, uint256 amount);
     
     constructor(address _bondingMath, address _mogulDAI, address _movieToken, address _mogulBank) public {
         
@@ -81,7 +82,24 @@ contract MogulOrganisation {
         uint256 tokensAfterPurchase = bondingMath.calcPurchase(mogulToken.totalSupply(), totalDAIInvestments, _daiAmount);
         return tokensAfterPurchase.sub(mogulToken.totalSupply());
     }
-
+    
+    function calcRelevantDAIForMGL(uint256 coTokenAmount) public view returns(uint256) {
+        return bondingMath.calcTokenSell(mogulToken.totalSupply(), mogulDAI.balanceOf(address(this)), coTokenAmount);
+    }
+    
+    function payDividends(uint256 dividendAmount)  public {
+        require(totalDAIInvestments > 0, "payDividends:: Organisation is not unlocked for dividends payment yet");
+        require(mogulDAI.allowance(msg.sender, address(this)) >= dividendAmount, "payDividends:: payer tries to pay with unapproved amount");
+        
+        uint256 reserveAmount = dividendAmount.div(DAI_RESERVE_REMAINDER);
+        mogulDAI.transferFrom(msg.sender, address(this), reserveAmount);
+        mogulDAI.transferFrom(msg.sender, mogulBank, dividendAmount.sub(reserveAmount));
+        
+        totalDAIInvestments = totalDAIInvestments.add(dividendAmount);
+        
+        emit DividendPayed(msg.sender, dividendAmount);
+    }
+    
     function unlockOrganisation(uint256 _unlockAmount) public {
         require(totalDAIInvestments == 0, "Organization is already unlocked");
         require(mogulDAI.allowance(msg.sender, address(this)) >= _unlockAmount, "Unlocker tries to unlock with unapproved DAI amount");
@@ -93,4 +111,5 @@ contract MogulOrganisation {
         
         emit UnlockOrganisation(msg.sender, _unlockAmount);
     }
+    
 }

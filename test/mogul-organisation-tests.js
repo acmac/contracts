@@ -1,4 +1,4 @@
-const etherlime = require('etherlime');
+const etherlime = require('etherlime-lib');
 const { buyCalc, sellCalc } = require('./utils/token-price-calculation');
 const contractInitializator = require('./utils/contract-initializator');
 
@@ -10,6 +10,7 @@ describe('Mogul Organisation Contract', () => {
 
     const OWNER = accounts[0].signer;
     const INVESTOR = accounts[1].signer;
+    const REPAYER = accounts[2].signer;
     const MOGUL_BANK = accounts[9].signer.address;
 
     const INITIAL_MOGUL_SUPPLY = "1000000000000000000";
@@ -188,7 +189,66 @@ describe('Mogul Organisation Contract', () => {
                 let tokens = "414213562299999999";
                 await assert.revert(mogulOrganisationInstance.from(OWNER).revokeInvestment(tokens));
             });
-        })
+        });
 
+        describe('Paying dividends', function () {
+
+            beforeEach(async () => {
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, {
+                    gasLimit: 300000
+                });
+
+                await contractInitializator.mintDAI(mogulDAIInstance, REPAYER.address, ONE_ETH);
+                await contractInitializator.approveDAI(mogulDAIInstance, REPAYER.address, mogulOrganisationInstance.contractAddress, ONE_ETH);
+            });
+
+            it('Should lower COToken returned on investment after paying dividents', async () => {
+
+                const coTokensPerInvestmentBefore = await mogulOrganisationInstance.calcRelevantMGLForDAI(INVESTMENT_AMOUNT);
+
+                await mogulOrganisationInstance.from(REPAYER).payDividends(ONE_ETH, {
+                    gasLimit: 300000
+                });
+
+                const coTokensPerInvestmentAfter = await mogulOrganisationInstance.calcRelevantMGLForDAI(INVESTMENT_AMOUNT);
+
+                assert(coTokensPerInvestmentAfter.lt(coTokensPerInvestmentBefore), "The tokens received after dividents repayment were not less than before")
+
+            });
+
+            it('Should receive more DAI on COToken exit after paying dividents', async () => {
+
+                let coTokens = await mogulTokenInstance.balanceOf(INVESTOR.address);
+
+                const DAIReturnedForInvestmentBefore = await mogulOrganisationInstance.calcRelevantDAIForMGL(coTokens);
+
+                await mogulOrganisationInstance.from(REPAYER).payDividends(ONE_ETH, {
+                    gasLimit: 300000
+                });
+
+                await mogulTokenInstance.approve(mogulOrganisationInstance.contractAddress, coTokens);
+                await mogulOrganisationInstance.from(INVESTOR).calcRelevantDAIForMGL(coTokens);
+
+                const DAIReturnedForInvestmentAfter = await mogulOrganisationInstance.calcRelevantDAIForMGL(coTokens);
+
+                assert(DAIReturnedForInvestmentAfter.gt(DAIReturnedForInvestmentBefore), "The DAI received after exit was not more than before dividents payout")
+
+            });
+
+            it('Should revert if one tries to repay with unapproved DAI', async () => {
+                await contractInitializator.mintDAI(mogulDAIInstance, REPAYER.address, ONE_ETH);
+                await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(TWO_ETH, {
+                    gasLimit: 300000
+                }));
+
+            });
+
+            it("Should revert if one tries to repay DAI that he doesn't have", async () => {
+                await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(TWO_ETH, {
+                    gasLimit: 300000
+                }));
+            });
+        })
     });
 });

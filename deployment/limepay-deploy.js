@@ -1,11 +1,11 @@
-const etherlime = require('etherlime');
+const etherlime = require('etherlime-cli');
 
 const MogulDAI = require('./../build/MogulDAI');
 
 const ECTools = require('./../build/ECTools.json');
 const EscrowLimePay = require('./../build/Escrow_V2');
 
-/* 
+/*
 	Ropsten:
 		DAI Token - 0xe0B206A30c778f8809c753844210c73D23001a96
 		LimePay Escrow - 0x742bB812c21FA81068d2B6b1F601e9A78E289689

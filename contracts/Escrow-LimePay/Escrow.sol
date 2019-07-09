@@ -1,10 +1,10 @@
 pragma solidity ^0.5.3;
 
 import "./ECTools.sol";
-import "./../../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./../../node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
-contract Escrow_V2 {
+contract Escrow {
     using SafeMath for uint256;
 
     ERC20 public tokenContract;
@@ -13,13 +13,13 @@ contract Escrow_V2 {
     mapping (uint256 => bool) public usedNonces;
 
     address payable public dAppAdmin;
-    uint256 constant public REFUNDING_LOGIC_GAS_COST = 7901; // gas used for single refund 
+    uint256 constant public REFUNDING_LOGIC_GAS_COST = 7901; // gas used for single refund
 
     uint256 constant public FIAT_PAYMENT_FUND_FUNCTION_CALL_GAS_USED = 32231; // gas used for calling fundForFiatPayment
     uint256 constant public RELAYED_PAYMENT_FUND_FUNCTION_CALL_GAS_USED = 31564; // gas used for calling fundForRelayedPayment
 
     modifier onlyDAppAdmin() {
-        require(msg.sender == dAppAdmin, "Unauthorized access"); 
+        require(msg.sender == dAppAdmin, "Unauthorized access");
         _;
     }
 
@@ -29,8 +29,8 @@ contract Escrow_V2 {
     }
 
     constructor(address tokenAddress, address payable _dAppAdmin) public {
-        dAppAdmin = _dAppAdmin;   
-        tokenContract = ERC20(tokenAddress); 
+        dAppAdmin = _dAppAdmin;
+        tokenContract = ERC20(tokenAddress);
     }
    
     function fundForRelayedPayment(uint256 nonce, address payable addressToFund, uint256 weiAmount, bytes memory authorizationSignature) public

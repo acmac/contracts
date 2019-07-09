@@ -1,5 +1,5 @@
 const ethers = require('ethers');
-const etherlime = require('etherlime');
+const etherlime = require('etherlime-lib');
 
 const DAIToken = require('./../build/MogulDAI');
 const MovieToken = require('./../build/MovieToken');
