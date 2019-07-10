@@ -51,16 +51,6 @@ describe('Mogul Organisation Contract', () => {
 
         });
 
-        it.only('should do something', async () => {
-            const hashMsg = ethers.utils.solidityKeccak256(['bytes'], [INVESTOR.address]);
-            let hashData = ethers.utils.arrayify(hashMsg);
-            let signedData = OWNER.signMessage(hashData);
-
-            let addr = await mogulOrganisationInstance.from(INVESTOR).validateWhitelist(signedData);
-            console.log(addr);
-            console.log(OWNER.address);
-        });
-
         describe('Unlocking', function () {
 
             it('Should unlock the organisation', async () => {
@@ -83,14 +73,22 @@ describe('Mogul Organisation Contract', () => {
             });
 
             it('Should throw if one tries to invest in non-unlocked organisation', async () => {
-                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(ONE_ETH), 'An investment has been processed for a non-unlocked organisation');
+                const hashMsg = ethers.utils.solidityKeccak256(['bytes'], [INVESTOR.address]);
+                const hashData = ethers.utils.arrayify(hashMsg);
+                const signedData = OWNER.signMessage(hashData);
+
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(ONE_ETH, signedData), 'An investment has been processed for a non-unlocked organisation');
             });
         });
 
         describe('Investment', function () {
             beforeEach(async () => {
+                const hashMsg = ethers.utils.solidityKeccak256(['bytes'], [INVESTOR.address]);
+                const hashData = ethers.utils.arrayify(hashMsg);
+                const signedData = OWNER.signMessage(hashData);
+
                 await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, {
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
                     gasLimit: 300000
                 });
             });
@@ -136,7 +134,72 @@ describe('Mogul Organisation Contract', () => {
 
             it('Should throw if an investor tries to invest with unapproved DAI amount', async () => {
                 let investorWithoutDAI = accounts[3].signer;
-                await assert.revert(mogulOrganisationInstance.from(investorWithoutDAI).invest(ONE_ETH), 'An investment has been processed with unapproved DAI amount');
+
+                const hashMsg = ethers.utils.solidityKeccak256(['bytes'], [investorWithoutDAI.address]);
+                const hashData = ethers.utils.arrayify(hashMsg);
+                const signedData = OWNER.signMessage(hashData);
+
+                await assert.revert(mogulOrganisationInstance.from(investorWithoutDAI).invest(ONE_ETH, signedData), 'An investment has been processed with unapproved DAI amount');
+            });
+
+        });
+
+        describe('Whitelist validations', function () {
+
+            beforeEach(async () => {
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
+            });
+
+            it('Should let investor to invest and save him as whitelisted if approved from owner / whitelister', async () => {
+                const hashMsg = ethers.utils.solidityKeccak256(['bytes'], [INVESTOR.address]);
+                const hashData = ethers.utils.arrayify(hashMsg);
+                const signedData = OWNER.signMessage(hashData);
+
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasLimit: 300000
+                });
+
+                const isWhitelisted = await mogulOrganisationInstance.whiteList(INVESTOR.address);
+                assert.ok(isWhitelisted);
+            });
+
+            it('Should let whitelisted investor to invest', async () => {
+                const hashMsg = ethers.utils.solidityKeccak256(['bytes'], [INVESTOR.address]);
+                const hashData = ethers.utils.arrayify(hashMsg);
+                const signedData = OWNER.signMessage(hashData);
+
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasLimit: 300000
+                });
+
+                const isWhitelisted = await mogulOrganisationInstance.whiteList(INVESTOR.address);
+                assert.ok(isWhitelisted);
+
+                await contractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, ONE_ETH);
+                await contractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, ONE_ETH);
+
+                const emptySignedData = "0x";
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, emptySignedData, {
+                    gasLimit: 300000
+                });
+            });
+
+            it('Should revert if not whitelisted investor try to invest', async () => {
+                const emptySignedData = "0x";
+
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, emptySignedData, {
+                    gasLimit: 300000
+                }));
+            });
+
+            it('Should revert if one try to invest with incorrect signature', async () => {
+                const hashMsg = ethers.utils.solidityKeccak256(['bytes'], [INVESTOR.address]);
+                const hashData = ethers.utils.arrayify(hashMsg);
+                const signedData = INVESTOR.signMessage(hashData);
+
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasLimit: 300000
+                }));
             });
 
         });
@@ -144,8 +207,12 @@ describe('Mogul Organisation Contract', () => {
         describe('Revoke Investment', function () {
 
             beforeEach(async () => {
+                const hashMsg = ethers.utils.solidityKeccak256(['bytes'], [INVESTOR.address]);
+                const hashData = ethers.utils.arrayify(hashMsg);
+                const signedData = OWNER.signMessage(hashData);
+
                 await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, {
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
                     gasLimit: 300000
                 });
             });
@@ -177,7 +244,11 @@ describe('Mogul Organisation Contract', () => {
                 await contractInitializator.mintDAI(mogulDAIInstance, OWNER.address, randomInvestment);
                 await mogulDAIInstance.from(OWNER).approve(mogulOrganisationInstance.contractAddress, randomInvestment);
 
-                await mogulOrganisationInstance.from(OWNER).invest(randomInvestment, {
+                const hashMsg = ethers.utils.solidityKeccak256(['bytes'], [OWNER.address]);
+                const hashData = ethers.utils.arrayify(hashMsg);
+                const signedData = OWNER.signMessage(hashData);
+
+                await mogulOrganisationInstance.from(OWNER).invest(randomInvestment, signedData, {
                     gasLimit: 300000
                 });
 
@@ -206,8 +277,12 @@ describe('Mogul Organisation Contract', () => {
         describe('Paying dividends', function () {
 
             beforeEach(async () => {
+                const hashMsg = ethers.utils.solidityKeccak256(['bytes'], [INVESTOR.address]);
+                const hashData = ethers.utils.arrayify(hashMsg);
+                const signedData = OWNER.signMessage(hashData);
+
                 await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, {
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
                     gasLimit: 300000
                 });
 

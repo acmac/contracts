@@ -44,14 +44,14 @@ contract MogulOrganisation {
         mogulToken = new MogulToken();
         mogulDAI = MogulDAI(_mogulDAI);
         movieToken = MovieToken(_movieToken);
+        whiteLister = msg.sender;
 
         mogulBank = _mogulBank;
         bondingMath = BondingMathematics(_bondingMath);
         
     }
     
-    function validateWhitelist(bytes memory signature) public returns (bool) {
-        
+    function validateInvestor(bytes memory signature) internal returns (bool) {
         bytes32 bytes32Message = keccak256(abi.encodePacked(msg.sender));
         bytes32 EthSignedMessageHash = ECDSA.toEthSignedMessageHash(bytes32Message);
         
@@ -63,11 +63,15 @@ contract MogulOrganisation {
         }
         
         return false;
-}
+    }
     
-    function invest(uint256 _daiAmount) public {
+    function invest(uint256 _daiAmount, bytes memory signedData) public {
         require(totalDAIInvestments > 0, "invest:: Organisation is not unlocked for investments yet");
         require(mogulDAI.allowance(msg.sender, address(this)) >= _daiAmount, "invest:: Investor tries to invest with unapproved DAI amount");
+        
+        if (!whiteList[msg.sender]) {
+            require(validateInvestor(signedData));
+        }
 
         uint256 mglTokensToMint = calcRelevantMGLForDAI(_daiAmount);
 
