@@ -1,8 +1,8 @@
-pragma solidity 0.5.4;
+pragma solidity ^0.5.4;
 
 import "./../Tokens/MogulDAI/MogulDAI.sol";
-import "./../../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./../../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract DAIExchange is Ownable {
 
@@ -14,7 +14,7 @@ contract DAIExchange is Ownable {
 
     constructor(address daiTokenContract) public {
         daiToken = MogulDAI(daiTokenContract);
-    }   
+    }
 
     // Rate should be always provided with 2 digits fraction precision
     function exchange(uint256 ethToDAIRate) external payable {
@@ -24,7 +24,7 @@ contract DAIExchange is Ownable {
 
         uint256 daiInReturn = ethToDAIRate.mul(msg.value).div(MINIMUM_EXCHANGE_RATE);
         daiToken.mint(msg.sender, daiInReturn);
-    } 
+    }
 
     function withdrawETH() external onlyOwner {
         require(msg.sender == owner(), "Only owner can withdraw ethers balance");

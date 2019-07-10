@@ -2,7 +2,7 @@ pragma solidity ^0.5.3;
 
 import "./../Math/Convert.sol";
 import "./../Tokens/MovieToken/MovieToken.sol";
-import "./../../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract Voting {
     
@@ -64,7 +64,7 @@ contract Voting {
         movieTokenInstance.transferFrom(msg.sender, address(this), voterTokensBalance);
 
         uint256 totalRating = __calculateRatingByTokens(voters[msg.sender].tokens.add(voterTokensBalance));
-        uint256 additionalRating = totalRating.sub(voters[msg.sender].rating); 
+        uint256 additionalRating = totalRating.sub(voters[msg.sender].rating);
 
         movies[movie] = movies[movie].add(additionalRating);
 

@@ -1,10 +1,10 @@
-pragma solidity 0.5.4;
+pragma solidity ^0.5.4;
 
 import "./Tokens/MogulDAI/MogulDAI.sol";
 import "./Tokens/MogulToken/MogulToken.sol";
 import "./Tokens/MovieToken/MovieToken.sol";
 import "./Math/BondingMathematics.sol";
-import "./../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 
 contract MogulOrganisation {
@@ -27,14 +27,15 @@ contract MogulOrganisation {
 
     event Invest(address investor, uint256 amount);
     event Withdraw(address investor, uint256 amount);
-    event UnlockOrganisation(address unlocker, uint256 initialAmount);
+    event UnlockOrganisation(address unlocker, uint256 initialAmount, uint256 initialMglSupply);
+    event DividendPayed(address payer, uint256 amount);
     
     constructor(address _bondingMath, address _mogulDAI, address _movieToken, address _mogulBank) public {
         
-        require(_mogulDAI != address(0), "Mogul DAI address is required");
-        require(_movieToken != address(0), "Movie Token address is required");
-        require(_mogulBank != address(0), "Mogul Bank address is required");
-        require(_bondingMath != address(0), "Bonding Math address is required");
+        require(_mogulDAI != address(0), "constructor:: Mogul DAI address is required");
+        require(_movieToken != address(0), "constructor:: Movie Token address is required");
+        require(_mogulBank != address(0), "constructor:: Mogul Bank address is required");
+        require(_bondingMath != address(0), "constructor:: Bonding Math address is required");
 
         mogulToken = new MogulToken();
         mogulDAI = MogulDAI(_mogulDAI);
@@ -43,12 +44,11 @@ contract MogulOrganisation {
         mogulBank = _mogulBank;
         bondingMath = BondingMathematics(_bondingMath);
         
-        mogulToken.mint(address(this), INITIAL_MGLTOKEN_SUPPLY);
     }
     
     function invest(uint256 _daiAmount) public {
-        require(totalDAIInvestments > 0, "Organisation is not unlocked for investments yet");
-        require(mogulDAI.allowance(msg.sender, address(this)) >= _daiAmount, "Investor tries to invest with unapproved DAI amount");
+        require(totalDAIInvestments > 0, "invest:: Organisation is not unlocked for investments yet");
+        require(mogulDAI.allowance(msg.sender, address(this)) >= _daiAmount, "invest:: Investor tries to invest with unapproved DAI amount");
 
         uint256 mglTokensToMint = calcRelevantMGLForDAI(_daiAmount);
 
@@ -65,7 +65,7 @@ contract MogulOrganisation {
     }
     
     function revokeInvestment(uint256 _amountMGL) public {
-        require(mogulToken.allowance(msg.sender, address(this)) >= _amountMGL, "Investor wants to withdraw MGL without allowance");
+        require(mogulToken.allowance(msg.sender, address(this)) >= _amountMGL, "revokeInvestment:: Investor wants to withdraw MGL without allowance");
         
         uint256 daiToReturn = bondingMath.calcTokenSell(mogulToken.totalSupply(), mogulDAI.balanceOf(address(this)), _amountMGL);
         
@@ -81,16 +81,36 @@ contract MogulOrganisation {
         uint256 tokensAfterPurchase = bondingMath.calcPurchase(mogulToken.totalSupply(), totalDAIInvestments, _daiAmount);
         return tokensAfterPurchase.sub(mogulToken.totalSupply());
     }
-
-    function unlockOrganisation(uint256 _unlockAmount) public {
-        require(totalDAIInvestments == 0, "Organization is already unlocked");
-        require(mogulDAI.allowance(msg.sender, address(this)) >= _unlockAmount, "Unlocker tries to unlock with unapproved DAI amount");
+    
+    function calcRelevantDAIForMGL(uint256 coTokenAmount) public view returns(uint256) {
+        return bondingMath.calcTokenSell(mogulToken.totalSupply(), mogulDAI.balanceOf(address(this)), coTokenAmount);
+    }
+    
+    function payDividends(uint256 dividendAmount)  public {
+        require(totalDAIInvestments > 0, "payDividends:: Organisation is not unlocked for dividends payment yet");
+        require(mogulDAI.allowance(msg.sender, address(this)) >= dividendAmount, "payDividends:: payer tries to pay with unapproved amount");
+        
+        uint256 reserveAmount = dividendAmount.div(DAI_RESERVE_REMAINDER);
+        mogulDAI.transferFrom(msg.sender, address(this), reserveAmount);
+        mogulDAI.transferFrom(msg.sender, mogulBank, dividendAmount.sub(reserveAmount));
+        
+        totalDAIInvestments = totalDAIInvestments.add(dividendAmount);
+        
+        emit DividendPayed(msg.sender, dividendAmount);
+    }
+    
+    function unlockOrganisation(uint256 _unlockAmount, uint256 _initialMglSupply) public {
+        require(totalDAIInvestments == 0, "unlockOrganisation:: Organization is already unlocked");
+        require(mogulDAI.allowance(msg.sender, address(this)) >= _unlockAmount, "unlockOrganisation:: Unlocker tries to unlock with unapproved amount");
 
         mogulDAI.transferFrom(msg.sender, address(this), _unlockAmount.div(DAI_RESERVE_REMAINDER));
         mogulDAI.transferFrom(msg.sender, mogulBank, _unlockAmount.sub(_unlockAmount.div(DAI_RESERVE_REMAINDER)));
         
         totalDAIInvestments = _unlockAmount;
+    
+        mogulToken.mint(msg.sender, _initialMglSupply);
         
-        emit UnlockOrganisation(msg.sender, _unlockAmount);
+        emit UnlockOrganisation(msg.sender, _unlockAmount, _initialMglSupply);
     }
+    
 }

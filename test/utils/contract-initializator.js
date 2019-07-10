@@ -1,10 +1,11 @@
-const etherlime = require('etherlime');
+const etherlime = require('etherlime-lib');
 
 const MogulDAI = require('./../../build/MogulDAI');
 const MovieToken = require('./../../build/MovieToken');
 const MogulToken = require('./../../build/MogulToken');
 
-const SQRT = require('./../../contracts/Math/SQRT.json');
+const SQRT = require('./../../build/SQRT');
+const TokensSQRT = require('./../../build/TokensSQRT');
 const BondingMathematics = require('./../../build/BondingMathematics');
 
 const MogulOrganisation = require('./../../build/MogulOrganisation');
@@ -13,6 +14,7 @@ const deployerWallet = accounts[0].signer;
 const MOGUL_BANK = accounts[9].signer.address;
 
 const deployer = new etherlime.EtherlimeGanacheDeployer();
+deployer.setDefaultOverrides({ gasLimit: 4700000, gasPrice: 9000000000 })
 
 
 let deployMogulOrganization = async (mglDai, movieTokenInstance) => {
@@ -34,11 +36,12 @@ let addMovieTokenMinter = async (movieTokenInstance, minterAddr) => {
     await movieTokenInstance.addMinter(minterAddr);
 };
 
-let deployTokensSQRT = async (deployerWallet) => {
-    let tx = await deployerWallet.sendTransaction({
-        data: SQRT.bytecode
-    });
-    return deployerWallet.provider.getTransactionReceipt(tx.hash);
+let deploySQRT = async () => {
+    return deployer.deploy(SQRT);
+};
+
+let deployTokenSQRT = async () => {
+    return deployer.deploy(TokensSQRT, {});
 };
 
 let getMogulToken = async (mogulOrganisationInstance, wallet) => {
@@ -49,7 +52,7 @@ let getMogulToken = async (mogulOrganisationInstance, wallet) => {
 };
 
 let deployBondingMath = async () => {
-    let sqrtContractAddress = await deployTokensSQRT(deployerWallet);
+    let sqrtContractAddress = await deploySQRT(deployerWallet);
     return deployer.deploy(BondingMathematics, {}, sqrtContractAddress.contractAddress);
 };
 
@@ -72,5 +75,6 @@ module.exports = {
     deployMogulOrganization,
     deployMglDai,
     addMovieTokenMinter,
-    deployMovieToken
+    deployMovieToken,
+    deployTokenSQRT
 };

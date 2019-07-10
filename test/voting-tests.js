@@ -1,7 +1,7 @@
-const etherlime = require('etherlime');
+const etherlime = require('etherlime-lib');
 
 const Voting = require('./../build/Voting');
-const TokensSQRT = require('./../contracts/Math/TokensSQRT.json');
+const TokensSQRT = require('./../build/TokensSQRT');
 
 const MovieToken = require('./../build/MovieToken');
 
@@ -151,7 +151,7 @@ describe('Voting Contract', function () {
 
         it('Should throw if voting period is expired', async () => {
             const DAY = 60 * 60 * 24;
-            utils.timeTravel(deployer.provider, VOTING_DURATION + DAY); // One day after the expiration date of voting 
+            utils.timeTravel(deployer.provider, VOTING_DURATION + DAY); // One day after the expiration date of voting
 
             await assert.revert(votingContract.from(VOTER).vote(MOVIES[0]), 'Voting after the expiration date did not throw');
         });
