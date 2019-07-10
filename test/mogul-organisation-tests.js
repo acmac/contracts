@@ -55,19 +55,21 @@ describe('Mogul Organisation Contract', () => {
 
             it('Should unlock the organisation', async () => {
                 let expectedBalance = "200000000000000000"; // 20% of one eth
-                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT);
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
                 let organisationBalance = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
+                let ownerMglBalance = await mogulTokenInstance.balanceOf(OWNER.address);
+                assert(ownerMglBalance.eq(INITIAL_MOGUL_SUPPLY), 'Owner balance is incorrect after unlocking');
                 assert(organisationBalance.eq(expectedBalance), 'Organisation balance is incorrect after unlocking');
             });
 
             it('Should throw on re-unlocking', async () => {
-                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT);
-                await assert.revert(mogulOrganisationInstance.unlockOrganisation(ONE_ETH), 'Re-unlocking of an organisation did not throw');
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
+                await assert.revert(mogulOrganisationInstance.unlockOrganisation(ONE_ETH, INITIAL_MOGUL_SUPPLY), 'Re-unlocking of an organisation did not throw');
             });
 
             it('Should throw if an unlocker tries to unlock with unapproved DAI amount', async () => {
-                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT);
-                await assert.revert(mogulOrganisationInstance.unlockOrganisation(TWO_ETH), 'Organisation has been unlocked with unapproved DAI amount');
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
+                await assert.revert(mogulOrganisationInstance.unlockOrganisation(TWO_ETH, INITIAL_MOGUL_SUPPLY), 'Organisation has been unlocked with unapproved DAI amount');
             });
 
             it('Should throw if one tries to invest in non-unlocked organisation', async () => {
@@ -77,7 +79,7 @@ describe('Mogul Organisation Contract', () => {
 
         describe('Investment', function () {
             beforeEach(async () => {
-                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT);
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
                 await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, {
                     gasLimit: 300000
                 });
@@ -132,7 +134,7 @@ describe('Mogul Organisation Contract', () => {
         describe('Revoke Investment', function () {
 
             beforeEach(async () => {
-                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT);
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
                 await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, {
                     gasLimit: 300000
                 });
@@ -194,7 +196,7 @@ describe('Mogul Organisation Contract', () => {
         describe('Paying dividends', function () {
 
             beforeEach(async () => {
-                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT);
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
                 await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, {
                     gasLimit: 300000
                 });

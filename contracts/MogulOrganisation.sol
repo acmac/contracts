@@ -27,7 +27,7 @@ contract MogulOrganisation {
 
     event Invest(address investor, uint256 amount);
     event Withdraw(address investor, uint256 amount);
-    event UnlockOrganisation(address unlocker, uint256 initialAmount);
+    event UnlockOrganisation(address unlocker, uint256 initialAmount, uint256 initialMglSupply);
     event DividendPayed(address payer, uint256 amount);
     
     constructor(address _bondingMath, address _mogulDAI, address _movieToken, address _mogulBank) public {
@@ -44,7 +44,6 @@ contract MogulOrganisation {
         mogulBank = _mogulBank;
         bondingMath = BondingMathematics(_bondingMath);
         
-        mogulToken.mint(address(this), INITIAL_MGLTOKEN_SUPPLY);
     }
     
     function invest(uint256 _daiAmount) public {
@@ -100,7 +99,7 @@ contract MogulOrganisation {
         emit DividendPayed(msg.sender, dividendAmount);
     }
     
-    function unlockOrganisation(uint256 _unlockAmount) public {
+    function unlockOrganisation(uint256 _unlockAmount, uint256 _initialMglSupply) public {
         require(totalDAIInvestments == 0, "unlockOrganisation:: Organization is already unlocked");
         require(mogulDAI.allowance(msg.sender, address(this)) >= _unlockAmount, "unlockOrganisation:: Unlocker tries to unlock with unapproved amount");
 
@@ -108,8 +107,10 @@ contract MogulOrganisation {
         mogulDAI.transferFrom(msg.sender, mogulBank, _unlockAmount.sub(_unlockAmount.div(DAI_RESERVE_REMAINDER)));
         
         totalDAIInvestments = _unlockAmount;
+    
+        mogulToken.mint(msg.sender, _initialMglSupply);
         
-        emit UnlockOrganisation(msg.sender, _unlockAmount);
+        emit UnlockOrganisation(msg.sender, _unlockAmount, _initialMglSupply);
     }
     
 }
