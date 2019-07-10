@@ -13,11 +13,11 @@ describe('Mogul Organisation Contract', () => {
     const REPAYER = accounts[2].signer;
     const MOGUL_BANK = accounts[9].signer.address;
 
-    const INITIAL_MOGUL_SUPPLY = "1000000000000000000";
+    const INITIAL_MOGUL_SUPPLY = ethers.utils.bigNumberify("1000000000000000000");
 
-    const ONE_ETH = "1000000000000000000";
-    const TWO_ETH = "2000000000000000000";
-    const normalization = 1000000000000000000;
+    const ONE_ETH = ethers.utils.bigNumberify("1000000000000000000");
+    const TWO_ETH = ethers.utils.bigNumberify("2000000000000000000");
+    const normalization = ethers.utils.bigNumberify("1000000000000000000");
 
     const INVESTMENT_AMOUNT = ONE_ETH;
     const UNLOCK_AMOUNT = ONE_ETH;
