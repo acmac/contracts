@@ -23,9 +23,9 @@ def calc_purchase(tokenSupply: uint256, totalSupply: uint256, amount: uint256) -
     totalSupplyAsDecimal: decimal = convert(totalSupply, decimal)
     amountAsDecimal: decimal = convert(amount, decimal)
 
-    temp: decimal = (1.0 + amountAsDecimal / totalSupplyAsDecimal)
-    sqrtCalc: uint256 = self.sqrt_high_precision(temp)
-    tokensAfterPurchase: uint256 = tokenSupply * (sqrtCalc - 1) / normalization
+    percentOfTotalSupply: decimal = (1.0 + amountAsDecimal / totalSupplyAsDecimal)
+    sqrtResult: uint256 = self.sqrt_high_precision(percentOfTotalSupply)
+    tokensAfterPurchase: uint256 = tokenSupply * (sqrtResult - 1) / normalization
     return tokensAfterPurchase
 
 @public
@@ -40,6 +40,5 @@ def calc_sell(tokenSupply: uint256, totalSupply: uint256, tokenAmount: uint256) 
     tokenAmountAsDecimal: decimal = convert(tokenAmount, decimal)
 
     a: decimal = 1.0 - tokenAmountAsDecimal / tokenSupplyAsDecimal
-    b: decimal = a * a
-    c: decimal = 1.0 - b
-    return convert(totalSupplyAsDecimal * c, uint256)
+    b: decimal = 1.0 - (a * a)
+    return convert(totalSupplyAsDecimal * b, uint256)
