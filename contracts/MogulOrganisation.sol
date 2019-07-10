@@ -32,10 +32,10 @@ contract MogulOrganisation {
     
     constructor(address _bondingMath, address _mogulDAI, address _movieToken, address _mogulBank) public {
         
-        require(_mogulDAI != address(0), "Mogul DAI address is required");
-        require(_movieToken != address(0), "Movie Token address is required");
-        require(_mogulBank != address(0), "Mogul Bank address is required");
-        require(_bondingMath != address(0), "Bonding Math address is required");
+        require(_mogulDAI != address(0), "constructor:: Mogul DAI address is required");
+        require(_movieToken != address(0), "constructor:: Movie Token address is required");
+        require(_mogulBank != address(0), "constructor:: Mogul Bank address is required");
+        require(_bondingMath != address(0), "constructor:: Bonding Math address is required");
 
         mogulToken = new MogulToken();
         mogulDAI = MogulDAI(_mogulDAI);
@@ -48,8 +48,8 @@ contract MogulOrganisation {
     }
     
     function invest(uint256 _daiAmount) public {
-        require(totalDAIInvestments > 0, "Organisation is not unlocked for investments yet");
-        require(mogulDAI.allowance(msg.sender, address(this)) >= _daiAmount, "Investor tries to invest with unapproved DAI amount");
+        require(totalDAIInvestments > 0, "invest:: Organisation is not unlocked for investments yet");
+        require(mogulDAI.allowance(msg.sender, address(this)) >= _daiAmount, "invest:: Investor tries to invest with unapproved DAI amount");
 
         uint256 mglTokensToMint = calcRelevantMGLForDAI(_daiAmount);
 
@@ -66,7 +66,7 @@ contract MogulOrganisation {
     }
     
     function revokeInvestment(uint256 _amountMGL) public {
-        require(mogulToken.allowance(msg.sender, address(this)) >= _amountMGL, "Investor wants to withdraw MGL without allowance");
+        require(mogulToken.allowance(msg.sender, address(this)) >= _amountMGL, "revokeInvestment:: Investor wants to withdraw MGL without allowance");
         
         uint256 daiToReturn = bondingMath.calcTokenSell(mogulToken.totalSupply(), mogulDAI.balanceOf(address(this)), _amountMGL);
         
@@ -101,8 +101,8 @@ contract MogulOrganisation {
     }
     
     function unlockOrganisation(uint256 _unlockAmount) public {
-        require(totalDAIInvestments == 0, "Organization is already unlocked");
-        require(mogulDAI.allowance(msg.sender, address(this)) >= _unlockAmount, "Unlocker tries to unlock with unapproved DAI amount");
+        require(totalDAIInvestments == 0, "unlockOrganisation:: Organization is already unlocked");
+        require(mogulDAI.allowance(msg.sender, address(this)) >= _unlockAmount, "unlockOrganisation:: Unlocker tries to unlock with unapproved amount");
 
         mogulDAI.transferFrom(msg.sender, address(this), _unlockAmount.div(DAI_RESERVE_REMAINDER));
         mogulDAI.transferFrom(msg.sender, mogulBank, _unlockAmount.sub(_unlockAmount.div(DAI_RESERVE_REMAINDER)));
