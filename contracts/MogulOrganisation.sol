@@ -5,6 +5,7 @@ import "./Tokens/MogulToken/MogulToken.sol";
 import "./Tokens/MovieToken/MovieToken.sol";
 import "./Math/BondingMathematics.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/cryptography/ECDSA.sol";
 
 
 contract MogulOrganisation {
@@ -20,6 +21,9 @@ contract MogulOrganisation {
     address public mogulBank;
 
     uint256 public totalDAIInvestments = 0;
+    
+    mapping (address => bool) public whiteList;
+    address public whiteLister;
     
     uint256 constant public MOVIE_TO_MGL_RATE = 10; // 1 Mogul Token -> 10 Movie Tokens (Utility tokens)
     uint256 constant public DAI_RESERVE_REMAINDER = 5; // 20%
@@ -45,6 +49,21 @@ contract MogulOrganisation {
         bondingMath = BondingMathematics(_bondingMath);
         
     }
+    
+    function validateWhitelist(bytes memory signature) public returns (bool) {
+        
+        bytes32 bytes32Message = keccak256(abi.encodePacked(msg.sender));
+        bytes32 EthSignedMessageHash = ECDSA.toEthSignedMessageHash(bytes32Message);
+        
+        address signer = ECDSA.recover(EthSignedMessageHash, signature);
+        
+        if (signer == whiteLister) {
+            whiteList[msg.sender] = true;
+            return true;
+        }
+        
+        return false;
+}
     
     function invest(uint256 _daiAmount) public {
         require(totalDAIInvestments > 0, "invest:: Organisation is not unlocked for investments yet");

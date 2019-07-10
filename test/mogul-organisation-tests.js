@@ -51,6 +51,16 @@ describe('Mogul Organisation Contract', () => {
 
         });
 
+        it.only('should do something', async () => {
+            const hashMsg = ethers.utils.solidityKeccak256(['bytes'], [INVESTOR.address]);
+            let hashData = ethers.utils.arrayify(hashMsg);
+            let signedData = OWNER.signMessage(hashData);
+
+            let addr = await mogulOrganisationInstance.from(INVESTOR).validateWhitelist(signedData);
+            console.log(addr);
+            console.log(OWNER.address);
+        });
+
         describe('Unlocking', function () {
 
             it('Should unlock the organisation', async () => {
