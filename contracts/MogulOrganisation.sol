@@ -41,7 +41,6 @@ contract MogulOrganisation is Whitelisting {
         mogulToken = new MogulToken();
         mogulDAI = MogulDAI(_mogulDAI);
         movieToken = MovieToken(_movieToken);
-        whiteLister = _whiteLister;
 
         mogulBank = _mogulBank;
         bondingMath = BondingMathematics(_bondingMath);
@@ -54,7 +53,7 @@ contract MogulOrganisation is Whitelisting {
         
         if (!whiteList[msg.sender]) {
             require(confirmedByWhiteLister(signedData));
-            setWhitelisted(msg.sender);
+            setWhitelisted(msg.sender, true);
         }
 
         uint256 mglTokensToMint = calcRelevantMGLForDAI(_daiAmount);

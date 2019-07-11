@@ -25,15 +25,11 @@ contract Whitelisting is Ownable {
         
         address signer = ECDSA.recover(EthSignedMessageHash, signature);
         
-        if (signer != whiteLister) {
-            return false;
-        }
-        
-        return true;
+        return signer == whiteLister;
     }
     
-    function setWhitelisted(address _whiteListedUser) internal {
+    function setWhitelisted(address _whiteListedUser, bool isWhitelisted) internal {
         require(_whiteListedUser != address(0));
-        whiteList[msg.sender] = true;
+        whiteList[msg.sender] = isWhitelisted;
     }
 }
