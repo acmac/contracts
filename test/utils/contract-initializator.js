@@ -15,7 +15,7 @@ const WHITELISTER = accounts[0].signer.address;
 const MOGUL_BANK = accounts[9].signer.address;
 
 const deployer = new etherlime.EtherlimeGanacheDeployer();
-deployer.setDefaultOverrides({ gasLimit: 5700000, gasPrice: 9000000000 });
+deployer.setDefaultOverrides({ gasLimit: 6700000, gasPrice: 9000000000 });
 
 
 let deployMogulOrganization = async (mglDai, movieTokenInstance) => {
