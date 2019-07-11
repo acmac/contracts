@@ -2,12 +2,10 @@ const etherlime = require('etherlime-lib');
 const { buyCalc, sellCalc } = require('./utils/token-price-calculation');
 const contractInitializator = require('./utils/contract-initializator');
 
-const MogulToken = require('./../build/MogulToken');
 
-describe('Mogul Organisation Contract', () => {
+describe('Mogul Organisation Contract', function() {
 
-    const deployer = new etherlime.EtherlimeGanacheDeployer();
-
+    this.timeout(20000);
     const OWNER = accounts[0].signer;
     const INVESTOR = accounts[1].signer;
     const REPAYER = accounts[2].signer;
@@ -27,6 +25,12 @@ describe('Mogul Organisation Contract', () => {
     let mogulTokenInstance;
 
     let mogulOrganisationInstance;
+
+    function hashData(wallet, data) {
+        const hashMsg = ethers.utils.solidityKeccak256(['bytes'], [data]);
+        const hashData = ethers.utils.arrayify(hashMsg);
+        return wallet.signMessage(hashData);
+    }
 
 
     describe('Continuous Organisation Contract', function () {
@@ -73,16 +77,18 @@ describe('Mogul Organisation Contract', () => {
             });
 
             it('Should throw if one tries to invest in non-unlocked organisation', async () => {
-                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(ONE_ETH), 'An investment has been processed for a non-unlocked organisation');
+                const signedData = hashData(OWNER, INVESTOR.address);
+
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(ONE_ETH, signedData), 'An investment has been processed for a non-unlocked organisation');
             });
         });
 
         describe('Investment', function () {
             beforeEach(async () => {
+                const signedData = hashData(OWNER, INVESTOR.address);
+
                 await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, {
-                    gasLimit: 300000
-                });
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
             });
 
             it('should send correct dai amount to the mogul bank', async () => {
@@ -126,7 +132,91 @@ describe('Mogul Organisation Contract', () => {
 
             it('Should throw if an investor tries to invest with unapproved DAI amount', async () => {
                 let investorWithoutDAI = accounts[3].signer;
-                await assert.revert(mogulOrganisationInstance.from(investorWithoutDAI).invest(ONE_ETH), 'An investment has been processed with unapproved DAI amount');
+
+                const signedData = hashData(OWNER, investorWithoutDAI.address);
+
+                await assert.revert(mogulOrganisationInstance.from(investorWithoutDAI).invest(ONE_ETH, signedData), 'An investment has been processed with unapproved DAI amount');
+            });
+
+        });
+
+        describe('Whitelist validations', function () {
+
+            it('Should change whiteLister', async () => {
+                const newWhiteLister = accounts[5].signer.address;
+
+                await mogulOrganisationInstance.setWhiteLister(newWhiteLister);
+                const newWhiteListerFromContract = await mogulOrganisationInstance.whiteLister();
+
+                assert.strictEqual(newWhiteListerFromContract, newWhiteLister, "WhiteLister is not changed correctly");
+            });
+
+            it('Should let new whitelister to whitelist user', async () => {
+                const newWhiteLister = accounts[5].signer;
+                await mogulOrganisationInstance.setWhiteLister(newWhiteLister.address);
+
+                const signedData = hashData(newWhiteLister, INVESTOR.address);
+
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+
+                const isWhitelisted = await mogulOrganisationInstance.whiteList(INVESTOR.address);
+                assert.ok(isWhitelisted);
+
+            });
+
+            it('Should not allow old admin to whitelist users', async () => {
+                const newWhiteLister = accounts[5].signer;
+                await mogulOrganisationInstance.setWhiteLister(newWhiteLister.address);
+
+                const signedData = hashData(OWNER, INVESTOR.address);
+
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData));
+
+            });
+
+            it('Should throw on trying to change whitelister not from owner', async () => {
+                const newWhiteLister = accounts[5].signer.address;
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).setWhiteLister(newWhiteLister), 'Changing whiteLister not from owner did not throw');
+            });
+
+            beforeEach(async () => {
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
+            });
+
+            it('Should let investor to invest and save him as whitelisted if approved from owner / whitelister', async () => {
+                const signedData = hashData(OWNER, INVESTOR.address);
+
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+
+                const isWhitelisted = await mogulOrganisationInstance.whiteList(INVESTOR.address);
+                assert.ok(isWhitelisted);
+            });
+
+            it('Should let whitelisted investor to invest', async () => {
+                const signedData = hashData(OWNER, INVESTOR.address);
+
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+
+                const isWhitelisted = await mogulOrganisationInstance.whiteList(INVESTOR.address);
+                assert.ok(isWhitelisted);
+
+                await contractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, ONE_ETH);
+                await contractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, ONE_ETH);
+
+                const emptySignedData = "0x";
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, emptySignedData);
+            });
+
+            it('Should revert if not whitelisted investor try to invest', async () => {
+                const emptySignedData = "0x";
+
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, emptySignedData));
+            });
+
+            it('Should revert if one try to invest with incorrect signature', async () => {
+                const signedData = hashData(INVESTOR, INVESTOR.address);
+
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData));
             });
 
         });
@@ -134,10 +224,10 @@ describe('Mogul Organisation Contract', () => {
         describe('Revoke Investment', function () {
 
             beforeEach(async () => {
+                const signedData = hashData(OWNER, INVESTOR.address);
+
                 await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, {
-                    gasLimit: 300000
-                });
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
             });
 
             it('Should sell MGL Tokens for ~ 80% less of their buying price', async () => {
@@ -167,9 +257,9 @@ describe('Mogul Organisation Contract', () => {
                 await contractInitializator.mintDAI(mogulDAIInstance, OWNER.address, randomInvestment);
                 await mogulDAIInstance.from(OWNER).approve(mogulOrganisationInstance.contractAddress, randomInvestment);
 
-                await mogulOrganisationInstance.from(OWNER).invest(randomInvestment, {
-                    gasLimit: 300000
-                });
+                const signedData = hashData(OWNER, OWNER.address);
+
+                await mogulOrganisationInstance.from(OWNER).invest(randomInvestment, signedData);
 
                 await mogulTokenInstance.approve(mogulOrganisationInstance.contractAddress, mglTokens);
                 await mogulOrganisationInstance.from(INVESTOR).revokeInvestment(mglTokens);
@@ -196,10 +286,10 @@ describe('Mogul Organisation Contract', () => {
         describe('Paying dividends', function () {
 
             beforeEach(async () => {
+                const signedData = hashData(OWNER, INVESTOR.address);
+
                 await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, {
-                    gasLimit: 300000
-                });
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
 
                 await contractInitializator.mintDAI(mogulDAIInstance, REPAYER.address, ONE_ETH);
                 await contractInitializator.approveDAI(mogulDAIInstance, REPAYER.address, mogulOrganisationInstance.contractAddress, ONE_ETH);
@@ -209,9 +299,7 @@ describe('Mogul Organisation Contract', () => {
 
                 const coTokensPerInvestmentBefore = await mogulOrganisationInstance.calcRelevantMGLForDAI(INVESTMENT_AMOUNT);
 
-                await mogulOrganisationInstance.from(REPAYER).payDividends(ONE_ETH, {
-                    gasLimit: 300000
-                });
+                await mogulOrganisationInstance.from(REPAYER).payDividends(ONE_ETH);
 
                 const coTokensPerInvestmentAfter = await mogulOrganisationInstance.calcRelevantMGLForDAI(INVESTMENT_AMOUNT);
 
@@ -225,9 +313,7 @@ describe('Mogul Organisation Contract', () => {
 
                 const DAIReturnedForInvestmentBefore = await mogulOrganisationInstance.calcRelevantDAIForMGL(coTokens);
 
-                await mogulOrganisationInstance.from(REPAYER).payDividends(ONE_ETH, {
-                    gasLimit: 300000
-                });
+                await mogulOrganisationInstance.from(REPAYER).payDividends(ONE_ETH);
 
                 await mogulTokenInstance.approve(mogulOrganisationInstance.contractAddress, coTokens);
                 await mogulOrganisationInstance.from(INVESTOR).calcRelevantDAIForMGL(coTokens);
@@ -240,16 +326,12 @@ describe('Mogul Organisation Contract', () => {
 
             it('Should revert if one tries to repay with unapproved DAI', async () => {
                 await contractInitializator.mintDAI(mogulDAIInstance, REPAYER.address, ONE_ETH);
-                await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(TWO_ETH, {
-                    gasLimit: 300000
-                }));
+                await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(TWO_ETH));
 
             });
 
             it("Should revert if one tries to repay DAI that he doesn't have", async () => {
-                await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(TWO_ETH, {
-                    gasLimit: 300000
-                }));
+                await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(TWO_ETH));
             });
         })
     });

@@ -11,10 +11,11 @@ const BondingMathematics = require('./../../build/BondingMathematics');
 const MogulOrganisation = require('./../../build/MogulOrganisation');
 
 const deployerWallet = accounts[0].signer;
+const WHITELISTER = accounts[0].signer.address;
 const MOGUL_BANK = accounts[9].signer.address;
 
 const deployer = new etherlime.EtherlimeGanacheDeployer();
-deployer.setDefaultOverrides({ gasLimit: 4700000, gasPrice: 9000000000 })
+deployer.setDefaultOverrides({ gasLimit: 6700000, gasPrice: 9000000000 });
 
 
 let deployMogulOrganization = async (mglDai, movieTokenInstance) => {
@@ -25,7 +26,8 @@ let deployMogulOrganization = async (mglDai, movieTokenInstance) => {
         bondingMathematicsInstance.contractAddress,
         mglDai.contractAddress,
         movieTokenInstance.contractAddress,
-        MOGUL_BANK);
+        MOGUL_BANK,
+        WHITELISTER);
 };
 
 let deployMovieToken = async () => {

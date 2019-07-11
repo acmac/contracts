@@ -5,9 +5,10 @@ import "./Tokens/MogulToken/MogulToken.sol";
 import "./Tokens/MovieToken/MovieToken.sol";
 import "./Math/BondingMathematics.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "./Helpers/Whitelisting.sol";
 
 
-contract MogulOrganisation {
+contract MogulOrganisation is Whitelisting {
 
     using SafeMath for uint256;
     
@@ -30,7 +31,7 @@ contract MogulOrganisation {
     event UnlockOrganisation(address unlocker, uint256 initialAmount, uint256 initialMglSupply);
     event DividendPayed(address payer, uint256 amount);
     
-    constructor(address _bondingMath, address _mogulDAI, address _movieToken, address _mogulBank) public {
+    constructor(address _bondingMath, address _mogulDAI, address _movieToken, address _mogulBank, address _whiteLister) Whitelisting(_whiteLister) public {
         
         require(_mogulDAI != address(0), "constructor:: Mogul DAI address is required");
         require(_movieToken != address(0), "constructor:: Movie Token address is required");
@@ -46,9 +47,14 @@ contract MogulOrganisation {
         
     }
     
-    function invest(uint256 _daiAmount) public {
+    function invest(uint256 _daiAmount, bytes memory signedData) public {
         require(totalDAIInvestments > 0, "invest:: Organisation is not unlocked for investments yet");
         require(mogulDAI.allowance(msg.sender, address(this)) >= _daiAmount, "invest:: Investor tries to invest with unapproved DAI amount");
+        
+        if (!whiteList[msg.sender]) {
+            require(confirmedByWhiteLister(signedData));
+            setWhitelisted(msg.sender, true);
+        }
 
         uint256 mglTokensToMint = calcRelevantMGLForDAI(_daiAmount);
 
