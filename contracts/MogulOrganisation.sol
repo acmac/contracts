@@ -5,10 +5,10 @@ import "./Tokens/MogulToken/MogulToken.sol";
 import "./Tokens/MovieToken/MovieToken.sol";
 import "./Math/BondingMathematics.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/cryptography/ECDSA.sol";
+import "./Helpers/Whitelisting.sol";
 
 
-contract MogulOrganisation {
+contract MogulOrganisation is Whitelisting {
 
     using SafeMath for uint256;
     
@@ -22,9 +22,6 @@ contract MogulOrganisation {
 
     uint256 public totalDAIInvestments = 0;
     
-    mapping (address => bool) public whiteList;
-    address public whiteLister;
-    
     uint256 constant public MOVIE_TO_MGL_RATE = 10; // 1 Mogul Token -> 10 Movie Tokens (Utility tokens)
     uint256 constant public DAI_RESERVE_REMAINDER = 5; // 20%
     uint256 constant public INITIAL_MGLTOKEN_SUPPLY = 1000000000000000000; // 1 Mogul Token
@@ -34,7 +31,7 @@ contract MogulOrganisation {
     event UnlockOrganisation(address unlocker, uint256 initialAmount, uint256 initialMglSupply);
     event DividendPayed(address payer, uint256 amount);
     
-    constructor(address _bondingMath, address _mogulDAI, address _movieToken, address _mogulBank) public {
+    constructor(address _bondingMath, address _mogulDAI, address _movieToken, address _mogulBank, address _whiteLister) Whitelisting(_whiteLister) public {
         
         require(_mogulDAI != address(0), "constructor:: Mogul DAI address is required");
         require(_movieToken != address(0), "constructor:: Movie Token address is required");
@@ -44,25 +41,11 @@ contract MogulOrganisation {
         mogulToken = new MogulToken();
         mogulDAI = MogulDAI(_mogulDAI);
         movieToken = MovieToken(_movieToken);
-        whiteLister = msg.sender;
+        whiteLister = _whiteLister;
 
         mogulBank = _mogulBank;
         bondingMath = BondingMathematics(_bondingMath);
         
-    }
-    
-    function validateInvestor(bytes memory signature) internal returns (bool) {
-        bytes32 bytes32Message = keccak256(abi.encodePacked(msg.sender));
-        bytes32 EthSignedMessageHash = ECDSA.toEthSignedMessageHash(bytes32Message);
-        
-        address signer = ECDSA.recover(EthSignedMessageHash, signature);
-        
-        if (signer == whiteLister) {
-            whiteList[msg.sender] = true;
-            return true;
-        }
-        
-        return false;
     }
     
     function invest(uint256 _daiAmount, bytes memory signedData) public {
@@ -70,7 +53,8 @@ contract MogulOrganisation {
         require(mogulDAI.allowance(msg.sender, address(this)) >= _daiAmount, "invest:: Investor tries to invest with unapproved DAI amount");
         
         if (!whiteList[msg.sender]) {
-            require(validateInvestor(signedData));
+            require(confirmedByWhiteLister(signedData));
+            setWhitelisted(msg.sender);
         }
 
         uint256 mglTokensToMint = calcRelevantMGLForDAI(_daiAmount);

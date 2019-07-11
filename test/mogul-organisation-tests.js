@@ -2,11 +2,8 @@ const etherlime = require('etherlime-lib');
 const { buyCalc, sellCalc } = require('./utils/token-price-calculation');
 const contractInitializator = require('./utils/contract-initializator');
 
-const MogulToken = require('./../build/MogulToken');
 
 describe('Mogul Organisation Contract', () => {
-
-    const deployer = new etherlime.EtherlimeGanacheDeployer();
 
     const OWNER = accounts[0].signer;
     const INVESTOR = accounts[1].signer;
@@ -81,6 +78,23 @@ describe('Mogul Organisation Contract', () => {
             });
         });
 
+        describe('WhiteList', function () {
+
+            it('Should change whiteLister', async () => {
+                const newWhiteLister = accounts[5].signer.address;
+
+                await mogulOrganisationInstance.setWhiteLister(newWhiteLister);
+                const newWhiteListerFromContract = await mogulOrganisationInstance.whiteLister();
+
+                assert.strictEqual(newWhiteListerFromContract, newWhiteLister, "WhiteLister is not changed correctly");
+            });
+
+            it('Should throw on trying to change whitelister not from owner', async () => {
+                const newWhiteLister = accounts[5].signer.address;
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).setWhiteLister(newWhiteLister), 'Changing whiteLister not from owner did not throw');
+            });
+        });
+
         describe('Investment', function () {
             beforeEach(async () => {
                 const hashMsg = ethers.utils.solidityKeccak256(['bytes'], [INVESTOR.address]);
@@ -88,9 +102,7 @@ describe('Mogul Organisation Contract', () => {
                 const signedData = OWNER.signMessage(hashData);
 
                 await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
-                    gasLimit: 300000
-                });
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
             });
 
             it('should send correct dai amount to the mogul bank', async () => {
