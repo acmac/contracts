@@ -21,13 +21,22 @@ deployer.setDefaultOverrides({ gasLimit: 6700000, gasPrice: 9000000000 });
 let deployMogulOrganization = async (mglDai, movieTokenInstance) => {
 
     let bondingMathematicsInstance = await deployBondingMath();
+    const mogulToken = await deployMogulToken();
 
-    return deployer.deploy(MogulOrganisation, {},
+    const mglOrganisationInstance = await deployer.deploy(MogulOrganisation, {},
         bondingMathematicsInstance.contractAddress,
         mglDai.contractAddress,
+        mogulToken.contractAddress,
         movieTokenInstance.contractAddress,
         MOGUL_BANK,
         WHITELISTER);
+
+
+    await mogulToken.addMinter(mglOrganisationInstance.contractAddress);
+    await mogulToken.renounceMinter();
+
+    return mglOrganisationInstance;
+
 };
 
 let deployMovieToken = async () => {
@@ -51,6 +60,10 @@ let getMogulToken = async (mogulOrganisationInstance, wallet) => {
     let mogulTokenContract = new ethers.Contract(mogulTokenAddress, MogulToken.abi, deployerWallet.provider);
     return mogulTokenContract.connect(wallet);
 
+};
+
+let deployMogulToken = async () => {
+    return deployer.deploy(MogulToken, {});
 };
 
 let deployBondingMath = async () => {
