@@ -31,14 +31,14 @@ contract MogulOrganisation is Whitelisting {
     event UnlockOrganisation(address unlocker, uint256 initialAmount, uint256 initialMglSupply);
     event DividendPayed(address payer, uint256 amount);
     
-    constructor(address _bondingMath, address _mogulDAI, address _movieToken, address _mogulBank, address _whiteLister) Whitelisting(_whiteLister) public {
+    constructor(address _bondingMath, address _mogulDAI, address _mogulToken, address _movieToken, address _mogulBank, address _whiteLister) Whitelisting(_whiteLister) public {
         
         require(_mogulDAI != address(0), "constructor:: Mogul DAI address is required");
         require(_movieToken != address(0), "constructor:: Movie Token address is required");
         require(_mogulBank != address(0), "constructor:: Mogul Bank address is required");
         require(_bondingMath != address(0), "constructor:: Bonding Math address is required");
 
-        mogulToken = new MogulToken();
+        mogulToken = MogulToken(_mogulToken);
         mogulDAI = MogulDAI(_mogulDAI);
         movieToken = MovieToken(_movieToken);
 
