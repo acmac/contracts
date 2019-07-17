@@ -17,9 +17,9 @@ const UNLOCK_AMOUNT = '1000000000000000000'; // 1 ETH
 const INITIAL_MOGUL_SUPPLY = '1000000000000000000'; // 1 ETH
 
 // Mogul wallet address
-let MOGUL_BANK = '0x53E63Ee92e1268919CF4757A9b1d48048C501A50';
-let DAI_TOKEN_ADDRESS = '0xe0B206A30c778f8809c753844210c73D23001a96';
-let WHITELISTER_ADDRESS = '0xD9995BAE12FEe327256FFec1e3184d492bD94C31';
+let MOGUL_BANK = '0x3EDBA762A053B939e581a6A2330a1B6470C14412';
+let DAI_TOKEN_ADDRESS = '0x1eaCe4925162117ec72586CD5Bee1C9cE0053e36';
+let WHITELISTER_ADDRESS = '0x3EDBA762A053B939e581a6A2330a1B6470C14412';
 
 const ENV = {
     LOCAL: 'LOCAL',
@@ -28,14 +28,14 @@ const ENV = {
 
 const DEPLOYERS = {
     LOCAL: (secret) => { return new etherlime.EtherlimeGanacheDeployer(secret, 8545, '') },
-    TEST: (secret) => { return new etherlime.InfuraPrivateKeyDeployer(secret, 'ropsten', '') }
+    TEST: (secret) => { return new etherlime.InfuraPrivateKeyDeployer(secret, 'ropsten', 'e7a6b9997e804bc6a91b8c8d6f1fd7d1') }
 };
 
 
 const deploy = async (network, secret) => {
 
-    // Change ENV in order to deploy on test net (Ropsten)
-    const deployer = getDeployer(ENV.LOCAL, secret);
+    // // Change ENV in order to deploy on test net (Ropsten)
+    const deployer = getDeployer(ENV.TEST, secret);
     const daiContract = await getDAIContract(deployer);
 
     let daiExchangeContract = await deployDAIExchange(deployer, daiContract);
@@ -55,9 +55,13 @@ const deploy = async (network, secret) => {
     await mogulTokenDeployed.addMinter(mogulOrganization.contractAddress);
     await mogulTokenDeployed.renounceMinter();
 
-    await daiContract.approve(mogulOrganization.contractAddress, UNLOCK_AMOUNT);
+    await daiContract.approve(mogulOrganization.contractAddress, UNLOCK_AMOUNT, {
+        gasLimit: 4700000
+    });
 
-    await mogulOrganization.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
+    await mogulOrganization.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
+        gasLimit: 4700000
+    });
 };
 
 let getDeployer = function (env, secret) {

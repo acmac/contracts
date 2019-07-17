@@ -27,7 +27,7 @@ describe('Mogul Organisation Contract', function() {
     let mogulOrganisationInstance;
 
     function hashData(wallet, data) {
-        const hashMsg = ethers.utils.solidityKeccak256(['bytes'], [data]);
+        const hashMsg = ethers.utils.solidityKeccak256(['address'], [data]);
         const hashData = ethers.utils.arrayify(hashMsg);
         return wallet.signMessage(hashData);
     }
