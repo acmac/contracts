@@ -1,6 +1,7 @@
 const etherlime = require('etherlime-lib');
 const { buyCalc, sellCalc } = require('./utils/token-price-calculation');
 const contractInitializator = require('./utils/contract-initializator');
+const ethers = require('ethers');
 
 
 describe('Mogul Organisation Contract', function () {
@@ -17,10 +18,11 @@ describe('Mogul Organisation Contract', function () {
     const TWO_ETH = ethers.utils.bigNumberify("2000000000000000000");
     const normalization = ethers.utils.bigNumberify("1000000000000000000");
 
-    const INVESTMENT_AMOUNT = ONE_ETH;
-    const UNLOCK_AMOUNT = ONE_ETH;
+    const INVESTMENT_AMOUNT = ONE_ETH.mul(100000);
+    const UNLOCK_AMOUNT = ONE_ETH.mul(2500000);
+    const DOUBLE_AMOUNT = UNLOCK_AMOUNT.mul(2);
 
-    const INITIAL_MOGUL_SUPPLY = TWO_ETH;
+    const INITIAL_MOGUL_SUPPLY = ONE_ETH.mul(5000000);
 
     let mogulDAIInstance;
     let movieTokenInstance;
@@ -32,6 +34,11 @@ describe('Mogul Organisation Contract', function () {
         const hashMsg = ethers.utils.solidityKeccak256(['address'], [data]);
         const hashData = ethers.utils.arrayify(hashMsg);
         return wallet.signMessage(hashData);
+    }
+
+    function toHumanReadableValue(wei) {
+
+        return wei.toString().match(/^-?\d+(?:\.\d{0,4})?/)[0]
     }
 
 
@@ -60,7 +67,7 @@ describe('Mogul Organisation Contract', function () {
         describe('Unlocking', function () {
 
             it('Should unlock the organisation', async () => {
-                let expectedBalance = "200000000000000000"; // 20% of one eth
+                let expectedBalance = UNLOCK_AMOUNT.div(5); // 20%
                 await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
                     gasLimit: 2000000
                 });
@@ -81,7 +88,7 @@ describe('Mogul Organisation Contract', function () {
                 await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
                     gasLimit: 2000000
                 });
-                await assert.revert(mogulOrganisationInstance.unlockOrganisation(TWO_ETH, INITIAL_MOGUL_SUPPLY), 'Organisation has been unlocked with unapproved DAI amount');
+                await assert.revert(mogulOrganisationInstance.unlockOrganisation(DOUBLE_AMOUNT, INITIAL_MOGUL_SUPPLY), 'Organisation has been unlocked with unapproved DAI amount');
             });
 
             it('Should throw if one tries to invest in non-unlocked organisation', async () => {
@@ -92,30 +99,39 @@ describe('Mogul Organisation Contract', function () {
         });
 
         describe('Investment', function () {
+            let signedData;
             beforeEach(async () => {
-                const signedData = hashData(OWNER, INVESTOR.address);
+                signedData = hashData(OWNER, INVESTOR.address);
 
                 await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
                     gasLimit: 2000000
                 });
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+
+            });
+
+            it('should calculate investment correctly', async () => {
+                const amount = await mogulOrganisationInstance.from(INVESTOR).calcRelevantMGLForDAI(INVESTMENT_AMOUNT)
+                const EXPECTED_INVESTOR_MOGUL_BALANCE = buyCalc(INITIAL_MOGUL_SUPPLY, INITIAL_MOGUL_SUPPLY, INVESTMENT_AMOUNT);
+                assert.strictEqual(toHumanReadableValue(ethers.utils.formatEther(amount)), toHumanReadableValue(Number(EXPECTED_INVESTOR_MOGUL_BALANCE / normalization).toFixed(10)))
             });
 
             it('should send correct dai amount to the mogul bank', async () => {
-                const EXPECTED_BANK_BALANCE = '1600000000000000000'; // 1.6 ETH (0.8 from unlocking + 0.8 from investing)
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                const EXPECTED_BANK_BALANCE = UNLOCK_AMOUNT.add(INVESTMENT_AMOUNT).div(5).mul(4); // 80% 
                 let bankBalance = await mogulDAIInstance.balanceOf(MOGUL_BANK);
                 assert(bankBalance.eq(EXPECTED_BANK_BALANCE), 'Incorrect bank balance after investment');
             });
 
             it('should send correct dai amount to the reserve', async () => {
-
-                const EXPECTED_RESERVE_BALANCE = '400000000000000000'; // 0.4 ETH (Unlocking + investment)
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                const EXPECTED_RESERVE_BALANCE = UNLOCK_AMOUNT.add(INVESTMENT_AMOUNT).div(5); // 0.4 ETH (Unlocking + investment)
                 let reserveBalance = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
                 assert(reserveBalance.eq(EXPECTED_RESERVE_BALANCE), 'Incorrect reserve balance after investment');
             });
 
             it('should send correct amount mogul tokens to the investor', async () => {
                 // normalization is because of 18 decimals of mogul token
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
                 const EXPECTED_INVESTOR_MOGUL_BALANCE = (buyCalc(INITIAL_MOGUL_SUPPLY, INITIAL_MOGUL_SUPPLY, INVESTMENT_AMOUNT) / normalization).toFixed(9);
                 let investorMogulBalance = await mogulTokenInstance.balanceOf(INVESTOR.address);
                 investorMogulBalance = (Number(investorMogulBalance.toString()) / normalization).toFixed(9);
@@ -125,6 +141,7 @@ describe('Mogul Organisation Contract', function () {
 
             it('should send correct amount movie tokens to the investor', async () => {
                 // 1:10 = mogul:movie token
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
                 let investorMogulBalance = await mogulTokenInstance.balanceOf(INVESTOR.address);
                 let EXPECTED_INVESTOR_MOVIE_BALANCE = ((investorMogulBalance * 10) / normalization).toFixed(8);
                 let investorMovieBalance = await movieTokenInstance.balanceOf(INVESTOR.address);
@@ -135,17 +152,19 @@ describe('Mogul Organisation Contract', function () {
 
             it('Should receive correct invest amount', async () => {
                 // EXPECTED_INVESTMENTS_AMOUNT = unlocking amount + investment amount
-                const EXPECTED_INVESTMENTS_AMOUNT = '2000000000000000000'; // 2 ETH
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                const EXPECTED_INVESTMENTS_AMOUNT = UNLOCK_AMOUNT.add(INVESTMENT_AMOUNT); // 2 ETH
                 let totalDAIInvestments = await mogulOrganisationInstance.totalDAIInvestments();
                 assert(totalDAIInvestments.eq(EXPECTED_INVESTMENTS_AMOUNT), 'Incorrect investments amount after investment');
             });
 
             it('Should throw if an investor tries to invest with unapproved DAI amount', async () => {
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
                 let investorWithoutDAI = accounts[3].signer;
 
-                const signedData = hashData(OWNER, investorWithoutDAI.address);
+                const signedData2 = hashData(OWNER, investorWithoutDAI.address);
 
-                await assert.revert(mogulOrganisationInstance.from(investorWithoutDAI).invest(ONE_ETH, signedData), 'An investment has been processed with unapproved DAI amount');
+                await assert.revert(mogulOrganisationInstance.from(investorWithoutDAI).invest(ONE_ETH, signedData2), 'An investment has been processed with unapproved DAI amount');
             });
 
         });
@@ -212,11 +231,10 @@ describe('Mogul Organisation Contract', function () {
                 const isWhitelisted = await mogulOrganisationInstance.whiteList(INVESTOR.address);
                 assert.ok(isWhitelisted);
 
-                await contractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, ONE_ETH);
-                await contractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, ONE_ETH);
+                await contractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, INVESTMENT_AMOUNT);
+                await contractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
 
-                const emptySignedData = "0x";
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, emptySignedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, ethers.constants.AddressZero);
             });
 
             it('Should revert if not whitelisted investor try to invest', async () => {
@@ -261,7 +279,7 @@ describe('Mogul Organisation Contract', function () {
                 let normalizedDAIBalance = (daiBalance / normalization).toFixed(6);
                 let expectedBalance = (expectedDai / normalization).toFixed(6);
 
-                assert.strictEqual(normalizedDAIBalance, expectedBalance);
+                assert.strictEqual(toHumanReadableValue(normalizedDAIBalance), toHumanReadableValue(expectedBalance));
             });
 
             it('Should sell MGL Tokens on profit after some investments', async () => {
@@ -344,12 +362,12 @@ describe('Mogul Organisation Contract', function () {
 
             it('Should revert if one tries to repay with unapproved DAI', async () => {
                 await contractInitializator.mintDAI(mogulDAIInstance, REPAYER.address, ONE_ETH);
-                await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(TWO_ETH));
+                await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(DOUBLE_AMOUNT));
 
             });
 
             it("Should revert if one tries to repay DAI that he doesn't have", async () => {
-                await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(TWO_ETH));
+                await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(DOUBLE_AMOUNT));
             });
         })
     });
