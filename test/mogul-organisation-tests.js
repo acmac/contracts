@@ -11,7 +11,7 @@ describe('Mogul Organisation Contract', function () {
     const REPAYER = accounts[2].signer;
     const MOGUL_BANK = accounts[9].signer.address;
 
-    const INITIAL_MOGUL_SUPPLY = ethers.utils.bigNumberify("1000000000000000000");
+
 
     const ONE_ETH = ethers.utils.bigNumberify("1000000000000000000");
     const TWO_ETH = ethers.utils.bigNumberify("2000000000000000000");
@@ -19,6 +19,8 @@ describe('Mogul Organisation Contract', function () {
 
     const INVESTMENT_AMOUNT = ONE_ETH;
     const UNLOCK_AMOUNT = ONE_ETH;
+
+    const INITIAL_MOGUL_SUPPLY = TWO_ETH;
 
     let mogulDAIInstance;
     let movieTokenInstance;
@@ -44,14 +46,14 @@ describe('Mogul Organisation Contract', function () {
             mogulTokenInstance = await contractInitializator.getMogulToken(mogulOrganisationInstance, INVESTOR);
 
             // Mint and Approve 1 ETH in order to unlock the organization
-            await contractInitializator.mintDAI(mogulDAIInstance, OWNER.address, ONE_ETH);
-            await contractInitializator.approveDAI(mogulDAIInstance, OWNER, mogulOrganisationInstance.contractAddress, ONE_ETH);
+            await contractInitializator.mintDAI(mogulDAIInstance, OWNER.address, UNLOCK_AMOUNT);
+            await contractInitializator.approveDAI(mogulDAIInstance, OWNER, mogulOrganisationInstance.contractAddress, UNLOCK_AMOUNT);
 
             await contractInitializator.addMovieTokenMinter(movieTokenInstance, mogulOrganisationInstance.contractAddress);
 
             // await approveDAI(INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
-            await contractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, ONE_ETH);
-            await contractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, ONE_ETH);
+            await contractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, INVESTMENT_AMOUNT);
+            await contractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
 
         });
 
@@ -59,7 +61,9 @@ describe('Mogul Organisation Contract', function () {
 
             it('Should unlock the organisation', async () => {
                 let expectedBalance = "200000000000000000"; // 20% of one eth
-                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
+                    gasLimit: 2000000
+                });
                 let organisationBalance = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
                 let ownerMglBalance = await mogulTokenInstance.balanceOf(OWNER.address);
                 assert(ownerMglBalance.eq(INITIAL_MOGUL_SUPPLY), 'Owner balance is incorrect after unlocking');
@@ -67,12 +71,16 @@ describe('Mogul Organisation Contract', function () {
             });
 
             it('Should throw on re-unlocking', async () => {
-                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
+                    gasLimit: 2000000
+                });
                 await assert.revert(mogulOrganisationInstance.unlockOrganisation(ONE_ETH, INITIAL_MOGUL_SUPPLY), 'Re-unlocking of an organisation did not throw');
             });
 
             it('Should throw if an unlocker tries to unlock with unapproved DAI amount', async () => {
-                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
+                    gasLimit: 2000000
+                });
                 await assert.revert(mogulOrganisationInstance.unlockOrganisation(TWO_ETH, INITIAL_MOGUL_SUPPLY), 'Organisation has been unlocked with unapproved DAI amount');
             });
 
@@ -87,7 +95,9 @@ describe('Mogul Organisation Contract', function () {
             beforeEach(async () => {
                 const signedData = hashData(OWNER, INVESTOR.address);
 
-                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
+                    gasLimit: 2000000
+                });
                 await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
             });
 
@@ -142,6 +152,12 @@ describe('Mogul Organisation Contract', function () {
 
         describe('Whitelist validations', function () {
 
+            beforeEach(async () => {
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
+                    gasLimit: 2000000
+                });
+            });
+
             it('Should change whiteLister', async () => {
                 const newWhiteLister = accounts[5].signer.address;
 
@@ -177,10 +193,6 @@ describe('Mogul Organisation Contract', function () {
             it('Should throw on trying to change whitelister not from owner', async () => {
                 const newWhiteLister = accounts[5].signer.address;
                 await assert.revert(mogulOrganisationInstance.from(INVESTOR).setWhiteLister(newWhiteLister), 'Changing whiteLister not from owner did not throw');
-            });
-
-            beforeEach(async () => {
-                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
             });
 
             it('Should let investor to invest and save him as whitelisted if approved from owner / whitelister', async () => {
@@ -226,7 +238,9 @@ describe('Mogul Organisation Contract', function () {
             beforeEach(async () => {
                 const signedData = hashData(OWNER, INVESTOR.address);
 
-                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
+                    gasLimit: 2000000
+                });
                 await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
             });
 
@@ -288,7 +302,9 @@ describe('Mogul Organisation Contract', function () {
             beforeEach(async () => {
                 const signedData = hashData(OWNER, INVESTOR.address);
 
-                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY);
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
+                    gasLimit: 2000000
+                });
                 await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
 
                 await contractInitializator.mintDAI(mogulDAIInstance, REPAYER.address, ONE_ETH);
