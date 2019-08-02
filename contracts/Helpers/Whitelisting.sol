@@ -14,9 +14,18 @@ contract Whitelisting is Ownable {
         whiteLister = _whiteLister;
     }
     
+    modifier onlyWhiteLister {
+        require(msg.sender == whiteLister);
+        _;
+    }
+    
     function setWhiteLister(address _newWhiteLister) public onlyOwner {
         require(_newWhiteLister != address(0));
         whiteLister = _newWhiteLister;
+    }
+    
+    function manageWhitelisted(address _whiteListedUser, bool isWhitelisted) public onlyWhiteLister {
+        setWhitelisted(_whiteListedUser, isWhitelisted);
     }
     
     function confirmedByWhiteLister(bytes memory signature) internal view returns (bool) {
@@ -30,6 +39,6 @@ contract Whitelisting is Ownable {
     
     function setWhitelisted(address _whiteListedUser, bool isWhitelisted) internal {
         require(_whiteListedUser != address(0));
-        whiteList[msg.sender] = isWhitelisted;
+        whiteList[_whiteListedUser] = isWhitelisted;
     }
 }
