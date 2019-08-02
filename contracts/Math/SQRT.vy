@@ -19,19 +19,18 @@ def calc_purchase(tokenSupply: uint256, preMintedAmount: uint256, amount: uint25
 
     normalization: uint256 = 100000000
 
-    tokenSupplyTrucated: uint256 = tokenSupply / normalization
+    tokenSupplyTruncated: uint256 = tokenSupply / normalization
     preMintedAmountTruncated: uint256 = preMintedAmount / normalization
     amountTruncated: uint256 = amount / normalization
 
-    x1: uint256 = tokenSupplyTrucated * tokenSupplyTrucated
+    x1: uint256 = tokenSupplyTruncated * tokenSupplyTruncated
     x2: uint256 = 2 * amountTruncated * preMintedAmountTruncated
     x3: uint256 = x1 + x2
     x3Decimal: decimal = convert(x3, decimal)
     x4: uint256 = self.sqrt_high_precision(x3Decimal)
 
-    res: uint256 = x4 - tokenSupplyTrucated
+    res: uint256 = x4 - tokenSupplyTruncated
     
-    # return x4 - tokenSupply
     return res * normalization
 
 @public
