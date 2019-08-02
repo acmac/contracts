@@ -1,28 +1,46 @@
-
-
 let DAI = 1000000000000000000 // 1 DAI
 let MGL = 1000000000000000000 // 1 MGL
 
 // ===== Variables to  play with
 
-let initialCOTokenSupply = 7999 * MGL
-let initialDAIInvestment = 8000 * DAI
-let investDAI = 10000; // Investment amount in DAI
-let investmentsCount = 15; // Number of times to invest 'investDAI' number of DAI
+let initialCOTokenSupplyND = 5000000
+let initialDAIInvestmentND = 2500000
 
-let dividendAmountInDAI = 10000; // Dividends repaid in DAI
 
-let sellMGL = 1000; // Number of MGL sold
-let sellCount = 15; // Number of times to sell 'sellMGL' number of tokens
+let initialCOTokenSupply = initialCOTokenSupplyND * MGL
+let initialDAIInvestment = initialDAIInvestmentND * DAI
+let investDAI = 500000; // Investment amount in DAI
+let investmentsCount = 10; // Number of times to invest 'investDAI' number of DAI
+
+let dividendAmountInDAI = 1000000; // Dividends repaid in DAI
+
+let sellMGL = 100000; // Number of MGL sold
+let sellCount = 5; // Number of times to sell 'sellMGL' number of tokens
+
+let reserveRatio = 20; //50 %
 
 // =====
 
-let buyCalc = function buyCalc(continuousTokenSupply, totalInvestedDAI, amount) {
-	return continuousTokenSupply * ((1 + amount / totalInvestedDAI) ** (0.5) - 1)
+const buyCalc = (
+	continuousTokenSupply,
+	preMintedAmount,
+	amount
+) => {
+	const x1 = continuousTokenSupply ** 2;
+	const x2 = 2 * amount * preMintedAmount;
+	const x3 = (x1 + x2) ** 0.5;
+	return x3 - continuousTokenSupply;
 };
 
-let sellCalc = function sellCalc(continuousTokenSupply, reserveSupply, tokenAmount) {
-	return (reserveSupply * (1 - (1 - tokenAmount / continuousTokenSupply) ** 2));
+const sellCalc = (
+	continuousTokenSupply,
+	reserveSupply,
+	tokenAmount
+) => {
+	const a = 1 - tokenAmount / continuousTokenSupply;
+	const b = 1 - a * a;
+
+	return reserveSupply * b;
 };
 
 const calculator = {
@@ -33,12 +51,14 @@ const calculator = {
 let runInvest = () => {
 	let investment = investDAI * DAI
 
+	console.log(`Scenario: ${investmentsCount} investors invest ${investDAI} DAI each`);
+
 	for (let i = 0; i < investmentsCount; i++) {
 		let res = calculator.buyCalc(initialCOTokenSupply, initialDAIInvestment, investment);
 		let tokensPerInvestment = res / 1000000000000000000;
 		let tokensPerDaIInvestment = tokensPerInvestment / investDAI;
 
-		console.log(`Tokens Per Investment: ${tokensPerInvestment.toFixed(15)} , Effective MGL received per 1 DAI investment: ${tokensPerDaIInvestment.toFixed(15)} MGL`)
+		console.log(`Investor ${i + 1} Tokens Per Investment: ${tokensPerInvestment.toFixed(15)} , Effective MGL received per 1 DAI investment: ${tokensPerDaIInvestment.toFixed(15)} MGL`)
 
 		initialCOTokenSupply += res;
 		initialDAIInvestment += investment;
@@ -59,7 +79,7 @@ let runInvest = () => {
 	console.log(initialDAIInvestment / 1000000000000000000)
 
 	console.log("Total DAI in reserve:")
-	console.log(initialDAIInvestment / 5 / 1000000000000000000)
+	console.log(initialDAIInvestment / (100 / reserveRatio) / 1000000000000000000)
 
 	return {
 		totalDAI: initialDAIInvestment,
@@ -75,12 +95,14 @@ let runPayDividents = (totalDAIInvested) => {
 let runSell = (COSupply, DAIInReserve) => {
 	let sell = sellMGL * MGL
 
+	console.log(`Scenario: ${sellCount} investors sell ${sellMGL} MGL each`);
+
 	for (let i = 0; i < sellCount; i++) {
 		let res = calculator.sellCalc(COSupply, DAIInReserve, sell);
 		let DAIForSale = res / 1000000000000000000;
 		let effectiveMGLPrice = DAIForSale / sellMGL;
 
-		console.log(`Dai Received for Sale: ${DAIForSale.toFixed(15)} , Effective Sell Price of 1 MGL: ${effectiveMGLPrice.toFixed(15)} DAI`)
+		console.log(`Seller ${i + 1} Dai Received for Sale: ${DAIForSale.toFixed(15)} , Effective Sell Price of 1 MGL: ${effectiveMGLPrice.toFixed(15)} DAI`)
 
 		COSupply -= sell;
 		DAIInReserve -= res;
@@ -100,6 +122,9 @@ let runSell = (COSupply, DAIInReserve) => {
 }
 
 let run = () => {
+	console.log(`Initial Investment: ${initialDAIInvestmentND} DAI`)
+	console.log(`Initial pre-minted: ${initialCOTokenSupplyND} MGL`)
+	console.log(`Reserve ratio: ${reserveRatio}%`)
 	console.log("\n\n===== Buying =====")
 	const buyRes = runInvest();
 	console.log("===== End Buying Phase =====")
@@ -107,7 +132,7 @@ let run = () => {
 	const totalDAI = runPayDividents(buyRes.totalDAI)
 	console.log("===== End Dividends Phase =====")
 	console.log("\n\n===== Selling =====")
-	runSell(buyRes.totalMGL, totalDAI / 5)
+	runSell(buyRes.totalMGL, totalDAI / (100 / reserveRatio))
 	console.log("===== End Selling Phase =====")
 }
 

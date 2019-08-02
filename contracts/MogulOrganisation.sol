@@ -21,6 +21,8 @@ contract MogulOrganisation is Whitelisting {
     address public mogulBank;
 
     uint256 public totalDAIInvestments = 0;
+    uint256 public initialInvestment = 0;
+    uint256 public premintedMGL = 0;
     
     uint256 constant public MOVIE_TO_MGL_RATE = 10; // 1 Mogul Token -> 10 Movie Tokens (Utility tokens)
     uint256 constant public DAI_RESERVE_REMAINDER = 5; // 20%
@@ -84,8 +86,8 @@ contract MogulOrganisation is Whitelisting {
     }
     
     function calcRelevantMGLForDAI(uint256 _daiAmount) public view returns(uint256) {
-        uint256 tokensAfterPurchase = bondingMath.calcPurchase(mogulToken.totalSupply(), totalDAIInvestments, _daiAmount);
-        return tokensAfterPurchase.sub(mogulToken.totalSupply());
+        uint256 tokensAfterPurchase = bondingMath.calcPurchase(mogulToken.totalSupply(), premintedMGL, _daiAmount);
+        return tokensAfterPurchase;
     }
     
     function calcRelevantDAIForMGL(uint256 coTokenAmount) public view returns(uint256) {
@@ -111,6 +113,9 @@ contract MogulOrganisation is Whitelisting {
 
         mogulDAI.transferFrom(msg.sender, address(this), _unlockAmount.div(DAI_RESERVE_REMAINDER));
         mogulDAI.transferFrom(msg.sender, mogulBank, _unlockAmount.sub(_unlockAmount.div(DAI_RESERVE_REMAINDER)));
+
+        initialInvestment = _unlockAmount;
+        premintedMGL = _initialMglSupply;
         
         totalDAIInvestments = _unlockAmount;
     

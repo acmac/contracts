@@ -4,29 +4,25 @@ def sqrt_high_precision(num: decimal) -> uint256:
     if num == 0.0:
         return 0
 
-    normalization: decimal = 1000000000000000000.0
-
     assert num >= 1.0
 
     root: decimal = sqrt(num)
-
-    root *= normalization
 
     return convert(root, uint256)
 
 @public
 @constant
-def calc_purchase(tokenSupply: uint256, totalSupply: uint256, amount: uint256) -> uint256:
-    # tokenSupply * (sqrt(1 + (amount/totalSupply)) - 1)
+def calc_purchase(tokenSupply: uint256, preMintedAmount: uint256, amount: uint256) -> uint256:
+    # 
     normalization: uint256 = 1000000000000000000
 
-    totalSupplyAsDecimal: decimal = convert(totalSupply, decimal)
-    amountAsDecimal: decimal = convert(amount, decimal)
-
-    percentOfTotalSupply: decimal = (1.0 + amountAsDecimal / totalSupplyAsDecimal)
-    sqrtResult: uint256 = self.sqrt_high_precision(percentOfTotalSupply)
-    tokensAfterPurchase: uint256 = tokenSupply * (sqrtResult - 1) / normalization
-    return tokensAfterPurchase
+    x1: uint256 = tokenSupply * tokenSupply
+    x2: uint256 = 2 * amount * preMintedAmount
+    x3: uint256 = x1 + x2
+    x3Decimal: decimal = convert(x3, decimal)
+    x4: uint256 = self.sqrt_high_precision(x3Decimal)
+    
+    return x4 - tokenSupply
 
 @public
 @constant

@@ -3,7 +3,7 @@ const { buyCalc, sellCalc } = require('./utils/token-price-calculation');
 const contractInitializator = require('./utils/contract-initializator');
 
 
-describe('Mogul Organisation Contract', function() {
+describe('Mogul Organisation Contract', function () {
 
     this.timeout(20000);
     const OWNER = accounts[0].signer;
@@ -106,7 +106,7 @@ describe('Mogul Organisation Contract', function() {
 
             it('should send correct amount mogul tokens to the investor', async () => {
                 // normalization is because of 18 decimals of mogul token
-                const EXPECTED_INVESTOR_MOGUL_BALANCE = (buyCalc(INITIAL_MOGUL_SUPPLY, UNLOCK_AMOUNT, INVESTMENT_AMOUNT) / normalization).toFixed(9);
+                const EXPECTED_INVESTOR_MOGUL_BALANCE = (buyCalc(INITIAL_MOGUL_SUPPLY, INITIAL_MOGUL_SUPPLY, INVESTMENT_AMOUNT) / normalization).toFixed(9);
                 let investorMogulBalance = await mogulTokenInstance.balanceOf(INVESTOR.address);
                 investorMogulBalance = (Number(investorMogulBalance.toString()) / normalization).toFixed(9);
 
@@ -297,13 +297,15 @@ describe('Mogul Organisation Contract', function() {
 
             it('Should lower COToken returned on investment after paying dividents', async () => {
 
-                const coTokensPerInvestmentBefore = await mogulOrganisationInstance.calcRelevantMGLForDAI(INVESTMENT_AMOUNT);
+                let mglTokens = await mogulTokenInstance.balanceOf(INVESTOR.address);
+
+                const coTokensPerInvestmentBefore = await mogulOrganisationInstance.calcRelevantDAIForMGL(mglTokens);
 
                 await mogulOrganisationInstance.from(REPAYER).payDividends(ONE_ETH);
 
-                const coTokensPerInvestmentAfter = await mogulOrganisationInstance.calcRelevantMGLForDAI(INVESTMENT_AMOUNT);
+                const coTokensPerInvestmentAfter = await mogulOrganisationInstance.calcRelevantDAIForMGL(mglTokens);
 
-                assert(coTokensPerInvestmentAfter.lt(coTokensPerInvestmentBefore), "The tokens received after dividents repayment were not less than before")
+                assert(coTokensPerInvestmentAfter.gt(coTokensPerInvestmentBefore), "The token sell price after dividents repayment were not increased")
 
             });
 
