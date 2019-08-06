@@ -24,8 +24,8 @@ contract Whitelisting is Ownable {
         whiteLister = _newWhiteLister;
     }
     
-    function manageWhitelisted(address _whiteListedUser, bool isWhitelisted) public onlyWhiteLister {
-        setWhitelisted(_whiteListedUser, isWhitelisted);
+    function setWhitelisted(address _whiteListedUser, bool isWhitelisted) public onlyWhiteLister {
+        _setWhitelisted(_whiteListedUser, isWhitelisted);
     }
     
     function confirmedByWhiteLister(bytes memory signature) internal view returns (bool) {
@@ -37,7 +37,7 @@ contract Whitelisting is Ownable {
         return signer == whiteLister;
     }
     
-    function setWhitelisted(address _whiteListedUser, bool isWhitelisted) internal {
+    function _setWhitelisted(address _whiteListedUser, bool isWhitelisted) internal {
         require(_whiteListedUser != address(0));
         whiteList[_whiteListedUser] = isWhitelisted;
     }

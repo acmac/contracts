@@ -8,7 +8,7 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./Helpers/Whitelisting.sol";
 
 
-contract MogulOrganisation is Whitelisting {
+contract MogulOrganisation is Whitelisting, MovementNotifier {
 
     using SafeMath for uint256;
     
@@ -55,7 +55,7 @@ contract MogulOrganisation is Whitelisting {
         
         if (!whiteList[msg.sender]) {
             require(confirmedByWhiteLister(signedData));
-            setWhitelisted(msg.sender, true);
+            _setWhitelisted(msg.sender, true);
         }
 
         uint256 mglTokensToMint = calcRelevantMGLForDAI(_daiAmount);
@@ -122,6 +122,10 @@ contract MogulOrganisation is Whitelisting {
         mogulToken.mint(msg.sender, _initialMglSupply);
         
         emit UnlockOrganisation(msg.sender, _unlockAmount, _initialMglSupply);
+    }
+    
+    function onTransfer(address to) public view returns(bool) {
+        return whiteList[to];
     }
     
 }

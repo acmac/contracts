@@ -34,6 +34,7 @@ let deployMogulOrganization = async (mglDai, movieTokenInstance) => {
 
     await mogulToken.addMinter(mglOrganisationInstance.contractAddress);
     await mogulToken.renounceMinter();
+    await mogulToken.setMovementNotifier([mglOrganisationInstance.contractAddress]);
 
     return mglOrganisationInstance;
 
