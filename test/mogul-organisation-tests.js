@@ -49,7 +49,7 @@ describe('Mogul Organisation Contract', function () {
 
             mogulOrganisationInstance = await contractInitializator.deployMogulOrganization(mogulDAIInstance, movieTokenInstance);
 
-            mogulTokenInstance = await contractInitializator.getMogulToken(mogulOrganisationInstance, INVESTOR);
+            mogulTokenInstance = await contractInitializator.getMogulToken(mogulOrganisationInstance, OWNER);
 
             // Mint and Approve 1 ETH in order to unlock the organization
             await contractInitializator.mintDAI(mogulDAIInstance, OWNER.address, UNLOCK_AMOUNT);
@@ -60,6 +60,47 @@ describe('Mogul Organisation Contract', function () {
             // await approveDAI(INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
             await contractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, INVESTMENT_AMOUNT);
             await contractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
+
+        });
+
+        describe('Movement Notifier', function () {
+
+            it('should return MovementNotifier implementation count', async () => {
+                let movementNotifiersCount = await mogulTokenInstance.getMovementNotifiersCount();
+                assert.strictEqual(movementNotifiersCount.toString(), "1")
+            });
+
+            it('should add MovementNotifier implementation address', async () => {
+                let newNotifierImpl = accounts[8].signer;
+
+                await mogulTokenInstance.addMovementNotifier(newNotifierImpl.address);
+
+                let movementNotifiersCount = await mogulTokenInstance.getMovementNotifiersCount();
+                let lastAddedAddress = await mogulTokenInstance.movementNotifiers(movementNotifiersCount - 1);
+                assert.strictEqual(lastAddedAddress, newNotifierImpl.address)
+            });
+
+            it('should NOT add MovementNotifier implementation address if not from owner', async () => {
+                mogulTokenInstance = await contractInitializator.getMogulToken(mogulOrganisationInstance, INVESTOR);
+                let newNotifierImpl = accounts[8].signer;
+
+                await assert.revert(mogulTokenInstance.addMovementNotifier(newNotifierImpl.address));
+            });
+
+            it('should remove from MovementNotifier implementation array', async () => {
+                let movementNotifiersCount = await mogulTokenInstance.getMovementNotifiersCount();
+                await mogulTokenInstance.removeMovementNotifier(movementNotifiersCount -1);
+
+                let movementNotifiersCountAfter = await mogulTokenInstance.getMovementNotifiersCount();
+                assert.strictEqual(movementNotifiersCountAfter.toString(), (movementNotifiersCount - 1).toString())
+            });
+
+            it('should NOT remove from MovementNotifier implementation array if not from owner', async () => {
+                mogulTokenInstance = await contractInitializator.getMogulToken(mogulOrganisationInstance, INVESTOR);
+
+                let movementNotifiersCount = await mogulTokenInstance.getMovementNotifiersCount();
+                await assert.revert(mogulTokenInstance.removeMovementNotifier(movementNotifiersCount -1));
+            });
 
         });
 
@@ -254,12 +295,6 @@ describe('Mogul Organisation Contract', function () {
                 assert.ok(!isWhitelisted);
             });
 
-            it('Should return true if user address is allowed to move tokens', async () => {
-                await mogulOrganisationInstance.from(OWNER).setWhitelisted(INVESTOR.address, true);
-                let result = await mogulOrganisationInstance.onTransfer(INVESTOR.address);
-                assert.ok(result);
-            });
-
             it('Should let one to transfer MGL tokens to whitelisted user', async () => {
                 const signedData = hashData(OWNER, INVESTOR.address);
                 await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
@@ -275,11 +310,6 @@ describe('Mogul Organisation Contract', function () {
                 await mogulTokenInstance.approve(INVESTOR.address, ONE_ETH);
                 await mogulOrganisationInstance.from(OWNER).setWhitelisted(INVESTOR.address, false);
                 await assert.revert(mogulTokenInstance.transfer(INVESTOR.address, ONE_ETH));
-            });
-
-            it('Should return false if user address is NOT allowed to move tokens', async () => {
-                let result = await mogulOrganisationInstance.onTransfer(INVESTOR.address);
-                assert.ok(!result);
             });
 
             it('Should revert if not whitelister tries to manage manually whitelisted', async () => {
@@ -303,6 +333,7 @@ describe('Mogul Organisation Contract', function () {
         describe('Revoke Investment', function () {
 
             beforeEach(async () => {
+                mogulTokenInstance = await contractInitializator.getMogulToken(mogulOrganisationInstance, INVESTOR);
                 const signedData = hashData(OWNER, INVESTOR.address);
 
                 await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
@@ -320,7 +351,9 @@ describe('Mogul Organisation Contract', function () {
                 let expectedDai = sellCalc(organisationMogulBalance, reserveBalance, mglTokens);
 
                 await mogulTokenInstance.approve(mogulOrganisationInstance.contractAddress, mglTokens);
-                await mogulOrganisationInstance.from(INVESTOR).revokeInvestment(mglTokens);
+                await mogulOrganisationInstance.from(INVESTOR).revokeInvestment(mglTokens, {
+                    gasLimit: 250000
+                });
 
 
                 let daiBalance = await mogulDAIInstance.balanceOf(INVESTOR.address);
@@ -343,7 +376,9 @@ describe('Mogul Organisation Contract', function () {
                 await mogulOrganisationInstance.from(OWNER).invest(randomInvestment, signedData);
 
                 await mogulTokenInstance.approve(mogulOrganisationInstance.contractAddress, mglTokens);
-                await mogulOrganisationInstance.from(INVESTOR).revokeInvestment(mglTokens);
+                await mogulOrganisationInstance.from(INVESTOR).revokeInvestment(mglTokens, {
+                    gasLimit: 250000
+                });
 
                 let daiBalance = await mogulDAIInstance.balanceOf(INVESTOR.address);
 
