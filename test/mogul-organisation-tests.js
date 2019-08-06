@@ -260,6 +260,23 @@ describe('Mogul Organisation Contract', function () {
                 assert.ok(result);
             });
 
+            it('Should let one to transfer MGL tokens to whitelisted user', async () => {
+                const signedData = hashData(OWNER, INVESTOR.address);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+
+                await mogulTokenInstance.approve(INVESTOR.address, ONE_ETH);
+                await mogulTokenInstance.transfer(INVESTOR.address, ONE_ETH);
+            });
+
+            it('Should revert if one tries to transfer MGL tokens to non whitelisted useer', async () => {
+                const signedData = hashData(OWNER, INVESTOR.address);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+
+                await mogulTokenInstance.approve(INVESTOR.address, ONE_ETH);
+                await mogulOrganisationInstance.from(OWNER).setWhitelisted(INVESTOR.address, false);
+                await assert.revert(mogulTokenInstance.transfer(INVESTOR.address, ONE_ETH));
+            });
+
             it('Should return false if user address is NOT allowed to move tokens', async () => {
                 let result = await mogulOrganisationInstance.onTransfer(INVESTOR.address);
                 assert.ok(!result);
