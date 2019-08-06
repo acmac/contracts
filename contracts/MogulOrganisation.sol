@@ -94,11 +94,12 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         return bondingMath.calcTokenSell(mogulToken.totalSupply(), mogulDAI.balanceOf(address(this)), coTokenAmount);
     }
     
-    function payDividends(uint256 dividendAmount)  public {
+    function payDividends(uint256 dividendAmount, uint8 percentage)  public {
+        require(percentage > 0 && percentage <= 100);
         require(totalDAIInvestments > 0, "payDividends:: Organisation is not unlocked for dividends payment yet");
         require(mogulDAI.allowance(msg.sender, address(this)) >= dividendAmount, "payDividends:: payer tries to pay with unapproved amount");
         
-        uint256 reserveAmount = dividendAmount.div(DAI_RESERVE_REMAINDER);
+        uint256 reserveAmount = (dividendAmount.mul(percentage)).div(100);
         mogulDAI.transferFrom(msg.sender, address(this), reserveAmount);
         mogulDAI.transferFrom(msg.sender, mogulBank, dividendAmount.sub(reserveAmount));
         
