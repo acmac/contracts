@@ -117,7 +117,7 @@ describe('Mogul Organisation Contract', function () {
 
             it('should send correct dai amount to the mogul bank', async () => {
                 await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
-                const EXPECTED_BANK_BALANCE = UNLOCK_AMOUNT.add(INVESTMENT_AMOUNT).div(5).mul(4); // 80% 
+                const EXPECTED_BANK_BALANCE = UNLOCK_AMOUNT.add(INVESTMENT_AMOUNT).div(5).mul(4); // 80%
                 let bankBalance = await mogulDAIInstance.balanceOf(MOGUL_BANK);
                 assert(bankBalance.eq(EXPECTED_BANK_BALANCE), 'Incorrect bank balance after investment');
             });
@@ -235,6 +235,28 @@ describe('Mogul Organisation Contract', function () {
                 await contractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
 
                 await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, ethers.constants.AddressZero);
+            });
+
+            it('Should let whitelister to manual whitelist user', async () => {
+                const newWhiteListed = accounts[5].signer;
+                await mogulOrganisationInstance.from(OWNER).manageWhitelisted(newWhiteListed.address, true);
+
+                const isWhitelisted = await mogulOrganisationInstance.whiteList(newWhiteListed.address);
+                assert.ok(isWhitelisted);
+            });
+
+            it('Should let whitelister to remove whitelist user', async () => {
+                const signedData = hashData(OWNER, INVESTOR.address);
+
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(OWNER).manageWhitelisted(INVESTOR.address, false);
+
+                const isWhitelisted = await mogulOrganisationInstance.whiteList(INVESTOR.address);
+                assert.ok(!isWhitelisted);
+            });
+
+            it('Should revert if not whitelister tries to manage manually whitelisted', async () => {
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).manageWhitelisted(INVESTOR.address, true));
             });
 
             it('Should revert if not whitelisted investor try to invest', async () => {
