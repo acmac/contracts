@@ -95,7 +95,7 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     }
     
     function payDividends(uint256 dividendAmount, uint8 dividendRatio)  public {
-        require(dividendRatio > 0 && dividendRatio <= 100);
+        require(dividendRatio <= 100, "dividendRatio is higher than maximum allowed");
         require(totalDAIInvestments > 0, "payDividends:: Organisation is not unlocked for dividends payment yet");
         require(mogulDAI.allowance(msg.sender, address(this)) >= dividendAmount, "payDividends:: payer tries to pay with unapproved amount");
         
