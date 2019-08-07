@@ -399,7 +399,7 @@ describe('Mogul Organisation Contract', function () {
             });
         });
 
-        describe.only('Paying dividends', function () {
+        describe('Paying dividends', function () {
 
             beforeEach(async () => {
                 const signedData = hashData(OWNER, INVESTOR.address);
@@ -413,7 +413,7 @@ describe('Mogul Organisation Contract', function () {
                 await contractInitializator.approveDAI(mogulDAIInstance, REPAYER.address, mogulOrganisationInstance.contractAddress, ONE_ETH);
             });
 
-            it('Should lower COToken returned on investment after paying dividents', async () => {
+            it('Should lower COToken returned on investment after paying dividends', async () => {
 
                 let mglTokens = await mogulTokenInstance.balanceOf(INVESTOR.address);
 
@@ -427,7 +427,7 @@ describe('Mogul Organisation Contract', function () {
 
             });
 
-            it('Should receive more DAI on COToken exit after paying dividents', async () => {
+            it('Should receive more DAI on COToken exit after paying dividends', async () => {
 
                 let coTokens = await mogulTokenInstance.balanceOf(INVESTOR.address);
 
@@ -444,17 +444,23 @@ describe('Mogul Organisation Contract', function () {
 
             });
 
-            it.only('Should done something', async () => {
+            it('Should allocate dividends correctly between mogul bank and CO', async () => {
 
-                let daiTokensBalance = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
-                console.log(daiTokensBalance.toString());
-                // const coTokensPerInvestmentBefore = await mogulOrganisationInstance.calcRelevantDAIForMGL(mglTokens);
-                //
-                // await mogulOrganisationInstance.from(REPAYER).payDividends(ONE_ETH, DIVIDEND_RATIO);
-                //
-                // const coTokensPerInvestmentAfter = await mogulOrganisationInstance.calcRelevantDAIForMGL(mglTokens);
-                //
-                // assert(coTokensPerInvestmentAfter.gt(coTokensPerInvestmentBefore), "The token sell price after dividents repayment were not increased")
+                let coBalance = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
+                let mogulBankBalance = await mogulDAIInstance.balanceOf(MOGUL_BANK);
+
+                let coPart = ONE_ETH.mul(20).div(100);
+
+                let expectedCOBalance = coBalance.add(coPart); // coBalance + 20%
+                let expectedMogulBankBalance = mogulBankBalance.add(ONE_ETH.sub(coPart)); // mogulBankBalance + 20%
+
+                await mogulOrganisationInstance.from(REPAYER).payDividends(ONE_ETH, DIVIDEND_RATIO);
+
+                let newCoBalance = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
+                let newMogulBankBalance = await mogulDAIInstance.balanceOf(MOGUL_BANK);
+
+                assert.strictEqual(expectedCOBalance.toString(), newCoBalance.toString());
+                assert.strictEqual(expectedMogulBankBalance.toString(), newMogulBankBalance.toString());
 
             });
 
