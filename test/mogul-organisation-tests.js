@@ -424,7 +424,6 @@ describe('Mogul Organisation Contract', function () {
                 const coTokensPerInvestmentAfter = await mogulOrganisationInstance.calcRelevantDAIForMGL(mglTokens);
 
                 assert(coTokensPerInvestmentAfter.gt(coTokensPerInvestmentBefore), "The token sell price after dividents repayment were not increased")
-
             });
 
             it('Should receive more DAI on COToken exit after paying dividends', async () => {
@@ -441,7 +440,6 @@ describe('Mogul Organisation Contract', function () {
                 const DAIReturnedForInvestmentAfter = await mogulOrganisationInstance.calcRelevantDAIForMGL(coTokens);
 
                 assert(DAIReturnedForInvestmentAfter.gt(DAIReturnedForInvestmentBefore), "The DAI received after exit was not more than before dividents payout")
-
             });
 
             it('Should allocate dividends correctly between mogul bank and CO', async () => {
@@ -449,7 +447,7 @@ describe('Mogul Organisation Contract', function () {
                 let coBalance = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
                 let mogulBankBalance = await mogulDAIInstance.balanceOf(MOGUL_BANK);
 
-                let coPart = ONE_ETH.mul(20).div(100);
+                let coPart = ONE_ETH.mul(DIVIDEND_RATIO).div(100);
 
                 let expectedCOBalance = coBalance.add(coPart); // coBalance + 20%
                 let expectedMogulBankBalance = mogulBankBalance.add(ONE_ETH.sub(coPart)); // mogulBankBalance + 20%
@@ -461,13 +459,40 @@ describe('Mogul Organisation Contract', function () {
 
                 assert.strictEqual(expectedCOBalance.toString(), newCoBalance.toString());
                 assert.strictEqual(expectedMogulBankBalance.toString(), newMogulBankBalance.toString());
+            });
 
+            it.only('Should allocate dividends correctly between mogul bank and CO whit 100% dividend ratio', async () => {
+                const newDividendRatio = 100;
+                let coBalance = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
+                let mogulBankBalance = await mogulDAIInstance.balanceOf(MOGUL_BANK);
+
+                let coPart = ONE_ETH.mul(newDividendRatio).div(100);
+
+                let expectedCOBalance = coBalance.add(coPart); // coBalance + 20%
+                let expectedMogulBankBalance = mogulBankBalance.add(ONE_ETH.sub(coPart)); // mogulBankBalance + 20%
+
+                await mogulOrganisationInstance.from(REPAYER).payDividends(ONE_ETH, newDividendRatio);
+
+                let newCoBalance = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
+                let newMogulBankBalance = await mogulDAIInstance.balanceOf(MOGUL_BANK);
+
+                assert.strictEqual(expectedCOBalance.toString(), newCoBalance.toString());
+                assert.strictEqual(expectedMogulBankBalance.toString(), newMogulBankBalance.toString());
+            });
+
+            it('Should revert if one tries to pay dividends whit zero ratio', async () => {
+                const zeroRatio = 0;
+                await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(ONE_ETH, zeroRatio));
+            });
+
+            it('Should revert if one tries to pay dividends whit higher than 100% ratio', async () => {
+                const higherRatio = 101;
+                await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(ONE_ETH, higherRatio));
             });
 
             it('Should revert if one tries to repay with unapproved DAI', async () => {
                 await contractInitializator.mintDAI(mogulDAIInstance, REPAYER.address, ONE_ETH);
                 await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(DOUBLE_AMOUNT, DIVIDEND_RATIO));
-
             });
 
             it("Should revert if one tries to repay DAI that he doesn't have", async () => {
