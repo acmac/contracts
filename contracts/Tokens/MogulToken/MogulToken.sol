@@ -42,7 +42,7 @@ contract MogulToken is ERC20Detailed, ERC20Mintable, ERC20Burnable, Ownable {
     
     function transferFrom(address from, address to, uint256 value) public returns (bool) {
         for (uint i = 0; i < movementNotifiers.length; i++) {
-            movementNotifiers[i].onTransfer(msg.sender, to, value);
+            movementNotifiers[i].onTransfer(from, to, value);
         }
         return super.transferFrom(from, to, value);
     }
