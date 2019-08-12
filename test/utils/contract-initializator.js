@@ -1,7 +1,6 @@
 const etherlime = require('etherlime-lib');
 
 const MogulDAI = require('./../../build/MogulDAI');
-const MovieToken = require('./../../build/MovieToken');
 const MogulToken = require('./../../build/MogulToken');
 
 const SQRT = require('./../../build/SQRT');
@@ -9,6 +8,8 @@ const TokensSQRT = require('./../../build/TokensSQRT');
 const BondingMathematics = require('./../../build/BondingMathematics');
 
 const MogulOrganisation = require('./../../build/MogulOrganisation');
+
+const Voting = require('../../build/Voting');
 
 const deployerWallet = accounts[0].signer;
 const WHITELISTER = accounts[0].signer.address;
@@ -18,7 +19,7 @@ const deployer = new etherlime.EtherlimeGanacheDeployer();
 deployer.setDefaultOverrides({ gasLimit: 6700000, gasPrice: 9000000000 });
 
 
-let deployMogulOrganization = async (mglDai, movieTokenInstance) => {
+let deployMogulOrganization = async (mglDai) => {
 
     let bondingMathematicsInstance = await deployBondingMath();
     const mogulToken = await deployMogulToken();
@@ -27,7 +28,6 @@ let deployMogulOrganization = async (mglDai, movieTokenInstance) => {
         bondingMathematicsInstance.contractAddress,
         mglDai.contractAddress,
         mogulToken.contractAddress,
-        movieTokenInstance.contractAddress,
         MOGUL_BANK,
         WHITELISTER);
 
@@ -37,14 +37,6 @@ let deployMogulOrganization = async (mglDai, movieTokenInstance) => {
     await mogulToken.addMovementNotifier(mglOrganisationInstance.contractAddress);
 
     return mglOrganisationInstance;
-};
-
-let deployMovieToken = async () => {
-    return deployer.deploy(MovieToken);
-};
-
-let addMovieTokenMinter = async (movieTokenInstance, minterAddr) => {
-    await movieTokenInstance.addMinter(minterAddr);
 };
 
 let deploySQRT = async () => {
@@ -83,13 +75,19 @@ let approveDAI = async (mogulDAIInstance, approver, to, amount) => {
     await mogulDAIInstance.from(approver).approve(to, amount)
 };
 
+let getVotingContract = async (mogulTokenAddress) => {
+    const sqrtContractAddress = await deployer.deploy(TokensSQRT);
+    return await deployer.deploy(Voting, {}, mogulTokenAddress, sqrtContractAddress.contractAddress);
+
+};
+
 module.exports = {
     getMogulToken,
     mintDAI,
     approveDAI,
     deployMogulOrganization,
     deployMglDai,
-    addMovieTokenMinter,
-    deployMovieToken,
-    deployTokenSQRT
+    deployTokenSQRT,
+    deployMogulToken,
+    getVotingContract
 };

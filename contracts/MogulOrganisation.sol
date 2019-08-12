@@ -2,7 +2,6 @@ pragma solidity ^0.5.4;
 
 import "./Tokens/MogulDAI/MogulDAI.sol";
 import "./Tokens/MogulToken/MogulToken.sol";
-import "./Tokens/MovieToken/MovieToken.sol";
 import "./Math/BondingMathematics.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./Helpers/Whitelisting.sol";
@@ -16,7 +15,6 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
 
     MogulDAI public mogulDAI;
     MogulToken public mogulToken;
-    MovieToken public movieToken;
 
     address public mogulBank;
 
@@ -33,16 +31,14 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     event UnlockOrganisation(address unlocker, uint256 initialAmount, uint256 initialMglSupply);
     event DividendPayed(address payer, uint256 amount);
     
-    constructor(address _bondingMath, address _mogulDAI, address _mogulToken, address _movieToken, address _mogulBank, address _whiteLister) Whitelisting(_whiteLister) public {
+    constructor(address _bondingMath, address _mogulDAI, address _mogulToken, address _mogulBank, address _whiteLister) Whitelisting(_whiteLister) public {
         
         require(_mogulDAI != address(0), "constructor:: Mogul DAI address is required");
-        require(_movieToken != address(0), "constructor:: Movie Token address is required");
         require(_mogulBank != address(0), "constructor:: Mogul Bank address is required");
         require(_bondingMath != address(0), "constructor:: Bonding Math address is required");
 
         mogulToken = MogulToken(_mogulToken);
         mogulDAI = MogulDAI(_mogulDAI);
-        movieToken = MovieToken(_movieToken);
 
         mogulBank = _mogulBank;
         bondingMath = BondingMathematics(_bondingMath);
@@ -65,7 +61,6 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         mogulDAI.transferFrom(msg.sender, mogulBank, _daiAmount.sub(reserveDAIAmount));
 
         mogulToken.mint(msg.sender, mglTokensToMint);
-        movieToken.mint(msg.sender, mglTokensToMint.mul(MOVIE_TO_MGL_RATE));
 
         totalDAIInvestments = totalDAIInvestments.add(_daiAmount);
 

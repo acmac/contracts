@@ -31,7 +31,6 @@ const DEPLOYERS = {
     TEST: (secret) => { return new etherlime.InfuraPrivateKeyDeployer(secret, 'ropsten', 'e7a6b9997e804bc6a91b8c8d6f1fd7d1') }
 };
 
-
 const deploy = async (network, secret) => {
 
     // // Change ENV in order to deploy on test net (Ropsten)
@@ -40,6 +39,7 @@ const deploy = async (network, secret) => {
 
     let daiExchangeContract = await deployDAIExchange(deployer, daiContract);
     await daiContract.addMinter(daiExchangeContract.contractAddress);
+    await daiContract.mint("0x4555A429Df5Cc32efa46BCb1412a3CD7Bf14b381", "100000000000000000000");
 
     // Deploy Movie Token
     const movieTokenContractDeployed = await deployer.deploy(MovieToken, {});
@@ -54,14 +54,16 @@ const deploy = async (network, secret) => {
     await movieTokenContractDeployed.addMinter(mogulOrganization.contractAddress);
     await mogulTokenDeployed.addMinter(mogulOrganization.contractAddress);
     await mogulTokenDeployed.renounceMinter();
+    await mogulTokenDeployed.addMovementNotifier(mogulOrganization.contractAddress);
+    console.log("addMovementNotifier");
 
     await daiContract.approve(mogulOrganization.contractAddress, UNLOCK_AMOUNT, {
         gasLimit: 4700000
     });
-
     await mogulOrganization.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
         gasLimit: 4700000
     });
+    console.log("Done Done");
 };
 
 let getDeployer = function (env, secret) {
