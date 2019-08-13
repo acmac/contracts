@@ -24,7 +24,6 @@ describe('Mogul Organisation Contract', function () {
     const INITIAL_MOGUL_SUPPLY = ONE_ETH.mul(5000000);
 
     let mogulDAIInstance;
-    let movieTokenInstance;
     let mogulTokenInstance;
 
     let mogulOrganisationInstance;
@@ -45,9 +44,8 @@ describe('Mogul Organisation Contract', function () {
 
         beforeEach(async () => {
             mogulDAIInstance = await contractInitializator.deployMglDai();
-            movieTokenInstance = await contractInitializator.deployMovieToken();
 
-            mogulOrganisationInstance = await contractInitializator.deployMogulOrganization(mogulDAIInstance, movieTokenInstance);
+            mogulOrganisationInstance = await contractInitializator.deployMogulOrganization(mogulDAIInstance);
 
             mogulTokenInstance = await contractInitializator.getMogulToken(mogulOrganisationInstance, OWNER);
 
@@ -55,7 +53,6 @@ describe('Mogul Organisation Contract', function () {
             await contractInitializator.mintDAI(mogulDAIInstance, OWNER.address, UNLOCK_AMOUNT);
             await contractInitializator.approveDAI(mogulDAIInstance, OWNER, mogulOrganisationInstance.contractAddress, UNLOCK_AMOUNT);
 
-            await contractInitializator.addMovieTokenMinter(movieTokenInstance, mogulOrganisationInstance.contractAddress);
 
             // await approveDAI(INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
             await contractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, INVESTMENT_AMOUNT);
@@ -177,17 +174,6 @@ describe('Mogul Organisation Contract', function () {
                 investorMogulBalance = (Number(investorMogulBalance.toString()) / normalization).toFixed(9);
 
                 assert.strictEqual(investorMogulBalance, EXPECTED_INVESTOR_MOGUL_BALANCE, 'Incorrect investor mogul balance after investment');
-            });
-
-            it('should send correct amount movie tokens to the investor', async () => {
-                // 1:10 = mogul:movie token
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
-                let investorMogulBalance = await mogulTokenInstance.balanceOf(INVESTOR.address);
-                let EXPECTED_INVESTOR_MOVIE_BALANCE = ((investorMogulBalance * 10) / normalization).toFixed(8);
-                let investorMovieBalance = await movieTokenInstance.balanceOf(INVESTOR.address);
-                investorMovieBalance = (Number(investorMovieBalance.toString()) / normalization).toFixed(8);
-
-                assert.strictEqual(investorMovieBalance, EXPECTED_INVESTOR_MOVIE_BALANCE, 'Incorrect investor movie balance after investment');
             });
 
             it('Should receive correct invest amount', async () => {
@@ -461,7 +447,7 @@ describe('Mogul Organisation Contract', function () {
                 assert.strictEqual(expectedMogulBankBalance.toString(), newMogulBankBalance.toString());
             });
 
-            it.only('Should allocate dividends correctly between mogul bank and CO whit 100% dividend ratio', async () => {
+            it('Should allocate dividends correctly between mogul bank and CO whit 100% dividend ratio', async () => {
                 const newDividendRatio = 100;
                 let coBalance = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
                 let mogulBankBalance = await mogulDAIInstance.balanceOf(MOGUL_BANK);
@@ -478,11 +464,6 @@ describe('Mogul Organisation Contract', function () {
 
                 assert.strictEqual(expectedCOBalance.toString(), newCoBalance.toString());
                 assert.strictEqual(expectedMogulBankBalance.toString(), newMogulBankBalance.toString());
-            });
-
-            it('Should revert if one tries to pay dividends whit zero ratio', async () => {
-                const zeroRatio = 0;
-                await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(ONE_ETH, zeroRatio));
             });
 
             it('Should revert if one tries to pay dividends whit higher than 100% ratio', async () => {

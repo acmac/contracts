@@ -361,7 +361,7 @@ describe('Voting Contract', function () {
             await votingContract.from(INVESTOR).vote(0, 0);
         });
 
-        it.only('Should finalize correctly', async () => {
+        it('Should finalize correctly', async () => {
             let winnerMovieSponsorship = MILION_DAI;
             let largestMovieSponsorship = MILION_DAI.mul(5);
             let sponsorshipReceiverBefore = await mogulDAIInstance.balanceOf(SPONSORSHIP_RECEIVER_1.address);
@@ -378,6 +378,17 @@ describe('Voting Contract', function () {
             assert(sponsorshipReceiverAfter.eq(sponsorshipReceiverBefore.add(winnerMovieSponsorship)));
             assert(ownerBalanceAfter.eq(largestMovieSponsorship.sub(winnerMovieSponsorship)));
 
+        });
+
+        it('Should not allow to finalize finalized round', async () => {
+            await utils.setTimeTo(provider, endDate + 1);
+            await votingContract.finalizeRound(0);
+            await assert.revert(votingContract.finalizeRound(0));
+
+        });
+
+        it('Should not allow to finalize round within voting period', async () => {
+            await assert.revert(votingContract.finalizeRound(0));
         });
 
     });
