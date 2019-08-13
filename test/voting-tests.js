@@ -24,7 +24,6 @@ describe('Voting Contract', function () {
     const SPONSORSHIP_RECEIVER_2 = accounts[3].signer;
     const SPONSORSHIP_RECEIVER_3 = accounts[4].signer;
     const SPONSORSHIP_RECEIVER_4 = accounts[5].signer;
-
     const SPONSORSHIP_RECEIVER_5 = accounts[6].signer;
 
     const today = new Date();
@@ -233,12 +232,10 @@ describe('Voting Contract', function () {
             mogulOrganisationInstance = await ContractInitializator.deployMogulOrganization(mogulDAIInstance);
             mogulTokenInstance = await ContractInitializator.getMogulToken(mogulOrganisationInstance, OWNER);
 
-            // Mint and Approve 1 ETH in order to unlock the organization
             await ContractInitializator.mintDAI(mogulDAIInstance, OWNER.address, UNLOCK_AMOUNT);
             await ContractInitializator.approveDAI(mogulDAIInstance, OWNER, mogulOrganisationInstance.contractAddress, UNLOCK_AMOUNT);
 
 
-            // await approveDAI(INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
             await ContractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, INVESTMENT_AMOUNT);
             await ContractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
 
@@ -323,6 +320,65 @@ describe('Voting Contract', function () {
             await assert.revert(votingContract.from(INVESTOR).vote(0, 5));
         });
 
+
+    });
+
+    describe('Finalizing', function () {
+
+        beforeEach(async () => {
+
+            mogulDAIInstance = await ContractInitializator.deployMglDai();
+            mogulOrganisationInstance = await ContractInitializator.deployMogulOrganization(mogulDAIInstance);
+            mogulTokenInstance = await ContractInitializator.getMogulToken(mogulOrganisationInstance, OWNER);
+
+            await ContractInitializator.mintDAI(mogulDAIInstance, OWNER.address, UNLOCK_AMOUNT);
+            await ContractInitializator.approveDAI(mogulDAIInstance, OWNER, mogulOrganisationInstance.contractAddress, UNLOCK_AMOUNT);
+
+            await ContractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, INVESTMENT_AMOUNT);
+            await ContractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
+
+            await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
+                gasLimit: 2000000
+            });
+
+            await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+
+            votingContract = await ContractInitializator.getVotingContract(mogulTokenInstance.address, mogulDAIInstance.contractAddress);
+
+            const blockInfo = await provider.getBlock();
+            startDate = blockInfo.timestamp + oneDay;
+            endDate = startDate + sevenDays;
+
+            await mogulDAIInstance.mint(OWNER.address, MILION_DAI.mul('5'));
+            await mogulDAIInstance.approve(votingContract.contractAddress, MILION_DAI.mul('5'));
+
+            await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+                gasLimit: 2700000
+            });
+
+            await utils.setTimeTo(provider, startDate);
+
+            await votingContract.from(INVESTOR).vote(0, 0);
+        });
+
+        it.only('Should finalize correctly', async () => {
+            let winnerMovieSponsorship = MILION_DAI;
+            let largestMovieSponsorship = MILION_DAI.mul(5);
+            let sponsorshipReceiverBefore = await mogulDAIInstance.balanceOf(SPONSORSHIP_RECEIVER_1.address);
+
+            await utils.setTimeTo(provider, endDate + 1);
+            await votingContract.finalizeRound(0);
+            let roundInfo = await votingContract.getRoundInfo(0);
+
+            assert.ok(roundInfo[3]);
+
+            let sponsorshipReceiverAfter = await mogulDAIInstance.balanceOf(SPONSORSHIP_RECEIVER_1.address);
+            let ownerBalanceAfter = await mogulDAIInstance.balanceOf(OWNER.address);
+
+            assert(sponsorshipReceiverAfter.eq(sponsorshipReceiverBefore.add(winnerMovieSponsorship)));
+            assert(ownerBalanceAfter.eq(largestMovieSponsorship.sub(winnerMovieSponsorship)));
+
+        });
 
     });
 });

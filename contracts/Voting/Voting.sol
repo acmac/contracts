@@ -24,6 +24,7 @@ contract Voting is Ownable {
         mapping (uint8 => Proposal) proposals;
         mapping (address => uint8) votedFor;
         uint256 maxInvestment;
+        bool isFinalized;
     }
     
     struct Proposal {
@@ -86,7 +87,8 @@ contract Voting is Ownable {
             proposalCount: uint8(_movieNames.length),
             startDate: _startDate,
             endDate: _expirationDate,
-            maxInvestment: largestInvestment
+            maxInvestment: largestInvestment,
+            isFinalized: false
             });
         
         rounds.push(currentRound);
@@ -127,8 +129,33 @@ contract Voting is Ownable {
         
     }
     
-    function getRoundInfo(uint256 _round) public view returns (uint256, uint256, uint8){
-        return (rounds[_round].startDate, rounds[_round].endDate, rounds[_round].proposalCount);
+    function finalizeRound(uint256 _round) public onlyOwner {
+        require(rounds[_round].endDate < now);
+        require(rounds.length > _round);
+        require(rounds[_round].isFinalized != true);
+
+        uint256 mostVotes;
+        uint8 WinnerMovieIndex;
+
+        for(uint8 i = 0; i < rounds[_round].proposalCount; i++) {
+            if(mostVotes < rounds[_round].proposals[i].totalVotes) {
+                mostVotes = rounds[_round].proposals[i].totalVotes;
+                WinnerMovieIndex = i;
+            }
+        }
+
+        uint256 remainingDAI = (rounds[_round].maxInvestment).sub(rounds[_round].proposals[WinnerMovieIndex].requestedAmount);
+
+        mogulDAITokenInstance.transfer(rounds[_round].proposals[WinnerMovieIndex].sponsorshipReceiver, rounds[_round].proposals[WinnerMovieIndex].requestedAmount);
+        if(remainingDAI > 0) {
+            mogulDAITokenInstance.transfer(owner(), remainingDAI);
+        }
+
+        rounds[_round].isFinalized = true;
+    }
+    
+    function getRoundInfo(uint256 _round) public view returns (uint256, uint256, uint8, bool){
+        return (rounds[_round].startDate, rounds[_round].endDate, rounds[_round].proposalCount, rounds[_round].isFinalized);
     }
     
     function getProposalInfo(uint256 _round, uint8 _proposal) public view returns (bytes32, bytes32, uint256, address, uint256){
