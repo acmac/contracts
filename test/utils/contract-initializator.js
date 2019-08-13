@@ -75,9 +75,9 @@ let approveDAI = async (mogulDAIInstance, approver, to, amount) => {
     await mogulDAIInstance.from(approver).approve(to, amount)
 };
 
-let getVotingContract = async (mogulTokenAddress) => {
-    const sqrtContractAddress = await deployer.deploy(TokensSQRT);
-    return await deployer.deploy(Voting, {}, mogulTokenAddress, sqrtContractAddress.contractAddress);
+let getVotingContract = async (mogulTokenAddress, mogulDAIAddress) => {
+    const sqrtContract = await deployer.deploy(TokensSQRT);
+    return await deployer.deploy(Voting, {}, mogulTokenAddress, mogulDAIAddress, sqrtContract.contractAddress);
 
 };
 

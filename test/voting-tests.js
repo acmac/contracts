@@ -1,10 +1,16 @@
 const etherlime = require('etherlime-lib');
+const calculationHelper = require('./utils/token-price-calculation');
 
 const ContractInitializator = require('./utils/contract-initializator');
 
 describe('Voting Contract', function () {
 
     this.timeout(20000);
+
+    const provider = new ethers.providers.JsonRpcProvider();
+
+    const sevenDays = 604800;
+    const oneDay = 86400;
 
     const OWNER = accounts[0].signer;
     const VOTER = accounts[1].signer;
@@ -82,7 +88,9 @@ describe('Voting Contract', function () {
 
         beforeEach(async () => {
             mogulTokenContract = await ContractInitializator.deployMogulToken();
-            votingContract = await ContractInitializator.getVotingContract(mogulTokenContract.contractAddress)
+            mogulDAIInstance = await ContractInitializator.deployMglDai();
+
+            votingContract = await ContractInitializator.getVotingContract(mogulTokenContract.contractAddress, mogulDAIInstance.contractAddress);
         });
 
         it('Should initialize the contract correctly', async () => {
@@ -100,14 +108,22 @@ describe('Voting Contract', function () {
 
         beforeEach(async () => {
             mogulTokenContract = await ContractInitializator.deployMogulToken();
-            votingContract = await ContractInitializator.getVotingContract(mogulTokenContract.contractAddress);
+            mogulDAIInstance = await ContractInitializator.deployMglDai();
 
-            startDate = Math.floor(today.setDate(today.getDate() + 1) / 1000);
-            endDate = Math.floor(today.setDate(today.getDate() + 30) / 1000);
+            votingContract = await ContractInitializator.getVotingContract(mogulTokenContract.contractAddress, mogulDAIInstance.contractAddress);
+            await mogulDAIInstance.mint(OWNER.address, MILION_DAI.mul('5'));
+            await mogulDAIInstance.approve(votingContract.contractAddress, MILION_DAI.mul('5'));
+
+            const blockInfo = await provider.getBlock();
+            startDate = blockInfo.timestamp + oneDay;
+            endDate = startDate + sevenDays;
+
         });
 
         it('Should make a proposal correctly', async () => {
-            await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate);
+            await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate,{
+                gasLimit: 2700000
+            });
 
             let lastVotingDate = await votingContract.lastVotingDate();
             assert(lastVotingDate.eq(endDate));
@@ -128,18 +144,26 @@ describe('Voting Contract', function () {
         });
 
         it('Should revert if start date is after end date', async () => {
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, endDate, startDate));
+            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, endDate, startDate, {
+                gasLimit: 2700000
+            }));
         });
 
         it('Should revert if start date is in the past', async () => {
             let dateInPast = endDate = Math.floor(today.setDate(today.getDate() - 30) / 1000);
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, dateInPast, endDate));
+            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, dateInPast, endDate, {
+                gasLimit: 2700000
+            }));
         });
 
         it('Should revert if start date is before last voting date', async () => {
-            await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate);
+            await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+                gasLimit: 2700000
+            });
             let dateDuringVotingPeriod = endDate = Math.floor(today.setDate(today.getDate() + 15) / 1000);
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, dateDuringVotingPeriod, endDate));
+            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, dateDuringVotingPeriod, endDate, {
+                gasLimit: 2700000
+            }));
         });
 
         it('Should revert if movie names are less than other properties', async () => {
@@ -150,7 +174,9 @@ describe('Voting Contract', function () {
                 '0x4d6f766965340000000000000000000000000000000000000000000000000000',
                 '0x4d6f766965350000000000000000000000000000000000000000000000000000'
             ];
-            await assert.revert(votingContract.createProposal(LESS_MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate));
+            await assert.revert(votingContract.createProposal(LESS_MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+                gasLimit: 2700000
+            }));
         });
 
         it('Should revert if movie descriptions are less or more than other properties', async () => {
@@ -161,7 +187,9 @@ describe('Voting Contract', function () {
                 '0x4d6f766965340000000000000000000000000000000000000000000000000000',
                 '0x4d6f766965350000000000000000000000000000000000000000000000000000'
             ];
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, LESS_MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate));
+            await assert.revert(votingContract.createProposal(MOVIE_NAMES, LESS_MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+                gasLimit: 2700000
+            }));
         });
 
         it('Should revert if sponsorship receivers are less or more than other properties', async () => {
@@ -175,7 +203,9 @@ describe('Voting Contract', function () {
                 accounts[6].signer.address,
             ];
 
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MORE_MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate));
+            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MORE_MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+                gasLimit: 2700000
+            }));
         });
 
         it('Should revert if movie descriptions are less or more than other properties', async () => {
@@ -188,7 +218,9 @@ describe('Voting Contract', function () {
                 MILION_DAI.mul('5'),
                 MILION_DAI.mul('6')
             ];
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MORE_MOVIE_REQUESTED_AMOUNT, startDate, endDate));
+            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MORE_MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+                gasLimit: 2700000
+            }));
         });
 
     });
@@ -196,10 +228,9 @@ describe('Voting Contract', function () {
     describe('Voting', function () {
 
         beforeEach(async () => {
+
             mogulDAIInstance = await ContractInitializator.deployMglDai();
-
             mogulOrganisationInstance = await ContractInitializator.deployMogulOrganization(mogulDAIInstance);
-
             mogulTokenInstance = await ContractInitializator.getMogulToken(mogulOrganisationInstance, OWNER);
 
             // Mint and Approve 1 ETH in order to unlock the organization
@@ -217,21 +248,81 @@ describe('Voting Contract', function () {
 
             await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
 
-            votingContract = await ContractInitializator.getVotingContract(mogulTokenInstance.address);
+            votingContract = await ContractInitializator.getVotingContract(mogulTokenInstance.address, mogulDAIInstance.contractAddress);
 
-            startDate = Math.floor(today.setDate(today.getDate() + 1) / 1000);
-            endDate = Math.floor(today.setDate(today.getDate() + 30) / 1000);
+            const blockInfo = await provider.getBlock();
+            startDate = blockInfo.timestamp + oneDay;
+            endDate = startDate + sevenDays;
 
-            await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate);
+            await mogulDAIInstance.mint(OWNER.address, MILION_DAI.mul('5'));
+            await mogulDAIInstance.approve(votingContract.contractAddress, MILION_DAI.mul('5'));
 
+            await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+                gasLimit: 2700000
+            });
+
+            await utils.setTimeTo(provider, startDate);
         });
 
-        it.only('Should make a proposal correctly', async () => {
+        it('Should vote correctly', async () => {
 
             await votingContract.from(INVESTOR).vote(0, 0);
-            let  voteInfo = await votingContract.getVoteInfo(0, OWNER.address);
-            console.log(voteInfo);
+
+            let voteInfo = await votingContract.getVoteInfo(0, INVESTOR.address);
+
+            //we are expecting movie index of 1 because we are giving the 0 index to empty votes
+            let expectedMovie = 1;
+            assert.strictEqual(voteInfo, expectedMovie, "the vote is not given to the first movie");
+
+            let proposalInfo = await votingContract.getProposalInfo(0, 0);
+
+            let investorMogulTokens = await mogulTokenInstance.balanceOf(INVESTOR.address);
+            let expectedRating = calculationHelper.sqrtTokens(investorMogulTokens.mul(10));
+
+            assert.strictEqual(proposalInfo[2].toString(), expectedRating.toString());
         });
+
+        it('Should allow voter to vote again for the same movie and recalculate his vote weight correctly', async () => {
+
+            await votingContract.from(INVESTOR).vote(0, 0);
+
+            await ContractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, INVESTMENT_AMOUNT);
+            await ContractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
+
+            await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                gasLimit: 2700000
+            });
+
+            await votingContract.from(INVESTOR).vote(0, 0);
+
+            let voteInfo = await votingContract.getVoteInfo(0, INVESTOR.address);
+
+            //we are expecting movie index of 1 because we are giving the 0 index to empty votes
+            let expectedMovie = 1;
+            assert.strictEqual(voteInfo, expectedMovie, "the vote is not given to the first movie");
+
+            let proposalInfo = await votingContract.getProposalInfo(0, 0);
+
+            let investorMogulTokens = await mogulTokenInstance.balanceOf(INVESTOR.address);
+            let expectedRating = calculationHelper.sqrtTokens(investorMogulTokens.mul(10));
+
+            assert.strictEqual(proposalInfo[2].toString(), expectedRating.toString());
+        });
+
+        it('Should revert if one tries to change his vote', async () => {
+            await votingContract.from(INVESTOR).vote(0, 0);
+            await assert.revert(votingContract.from(INVESTOR).vote(0, 2));
+        });
+
+        it('Should revert if one tries to vote outside voting period', async () => {
+            await utils.setTimeTo(provider, endDate + 1);
+            await assert.revert(votingContract.from(INVESTOR).vote(0, 1));
+        });
+
+        it('Should revert if one tries to vote to non-existing movie id', async () => {
+            await assert.revert(votingContract.from(INVESTOR).vote(0, 5));
+        });
+
 
     });
 });
