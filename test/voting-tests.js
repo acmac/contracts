@@ -271,11 +271,13 @@ describe('Voting Contract', function () {
             assert.strictEqual(voteInfo, expectedMovie, "the vote is not given to the first movie");
 
             let proposalInfo = await votingContract.getProposalInfo(0, 0);
+            let voterVoteInfo = await votingContract.getVotersVotesInfo(0, 0, INVESTOR.address);
 
             let investorMogulTokens = await mogulTokenInstance.balanceOf(INVESTOR.address);
             let expectedRating = calculationHelper.sqrtTokens(investorMogulTokens.mul(10));
 
             assert.strictEqual(proposalInfo[2].toString().substring(0, 10), expectedRating.toString());
+            assert.strictEqual(voterVoteInfo.toString().substring(0, 10), expectedRating.toString());
         });
 
         it('Should allow voter to vote again for the same movie and recalculate his vote weight correctly', async () => {
