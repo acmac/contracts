@@ -7,7 +7,7 @@ import "../Tokens/MogulToken/MogulToken.sol";
 import "../Tokens/MogulDAI/MogulDAI.sol";
 
 
-contract Voting is Ownable {
+contract Voting is Ownable, MovementNotifier {
     
     using Convert for bytes;
     using SafeMath for uint256;
@@ -121,23 +121,47 @@ contract Voting is Ownable {
         require(rounds[currentRound].endDate < now, "finalizeRound :: the round is not finished");
 
         uint256 mostVotes;
-        uint8 WinnerMovieIndex;
+        uint8 winnerMovieIndex;
 
         for(uint8 i = 0; i < rounds[currentRound].proposalCount; i++) {
             if(mostVotes < rounds[currentRound].proposals[i].totalVotes) {
                 mostVotes = rounds[currentRound].proposals[i].totalVotes;
-                WinnerMovieIndex = i;
+                winnerMovieIndex = i;
             }
         }
 
-        uint256 remainingDAI = (rounds[currentRound].maxInvestment).sub(rounds[currentRound].proposals[WinnerMovieIndex].requestedAmount);
+        uint256 remainingDAI = (rounds[currentRound].maxInvestment).sub(rounds[currentRound].proposals[winnerMovieIndex].requestedAmount);
 
-        daiTokenInstance.transfer(rounds[currentRound].proposals[WinnerMovieIndex].sponsorshipReceiver, rounds[currentRound].proposals[WinnerMovieIndex].requestedAmount);
+        daiTokenInstance.transfer(rounds[currentRound].proposals[winnerMovieIndex].sponsorshipReceiver, rounds[currentRound].proposals[winnerMovieIndex].requestedAmount);
         if(remainingDAI > 0) {
             daiTokenInstance.transfer(owner(), remainingDAI);
         }
 
         currentRound++;
+    }
+    
+    function onTransfer(address from, address to, uint256 value) public {
+//        if (rounds[currentRound].votedFor[from] > 0) {
+//            uint8 proposalIndex = rounds[currentRound].votedFor[from] - 1;
+//            uint256 votes = rounds[currentRound].proposals[proposalIndex].voterToVotes[from];
+//
+//            rounds[currentRound].proposals[proposalIndex].totalVotes = rounds[currentRound].proposals[proposalIndex].totalVotes.sub(votes);
+//            rounds[currentRound].proposals[proposalIndex].voterToVotes[from] = 0;
+//            rounds[currentRound].votedFor[from] = 0;
+//        }
+    }
+    
+    function onBurn(address from, uint256 value) public {
+//        if (rounds[currentRound].votedFor[from] != 0
+//        && rounds[currentRound].startDate <= now
+//        && rounds[currentRound].endDate >= now) {
+//            uint8 proposalIndex = rounds[currentRound].votedFor[from] - 1;
+//            uint256 votes = rounds[currentRound].proposals[proposalIndex].voterToVotes[from];
+//
+//            rounds[currentRound].proposals[proposalIndex].totalVotes = rounds[currentRound].proposals[proposalIndex].totalVotes.sub(votes);
+//            rounds[currentRound].proposals[proposalIndex].voterToVotes[from] = 0;
+//            rounds[currentRound].votedFor[from] = 0;
+//        }
     }
     
     function getRoundInfo(uint256 _round) public view returns (uint256, uint256, uint8){

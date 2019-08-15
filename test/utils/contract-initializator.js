@@ -32,9 +32,13 @@ let deployMogulOrganization = async (mglDai) => {
         WHITELISTER);
 
 
+    const votingContract = await getVotingContract(mogulToken.contractAddress, mglDai.contractAddress);
+
     await mogulToken.addMinter(mglOrganisationInstance.contractAddress);
     await mogulToken.renounceMinter();
+
     await mogulToken.addMovementNotifier(mglOrganisationInstance.contractAddress);
+    await mogulToken.addMovementNotifier(votingContract.contractAddress);
 
     return mglOrganisationInstance;
 };

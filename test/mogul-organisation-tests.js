@@ -64,7 +64,7 @@ describe('Mogul Organisation Contract', function () {
 
             it('should return MovementNotifier implementation count', async () => {
                 let movementNotifiersCount = await mogulTokenInstance.getMovementNotifiersCount();
-                assert.strictEqual(movementNotifiersCount.toString(), "1")
+                assert.strictEqual(movementNotifiersCount.toString(), "2")
             });
 
             it('should add MovementNotifier implementation address', async () => {
@@ -281,7 +281,7 @@ describe('Mogul Organisation Contract', function () {
                 assert.ok(!isWhitelisted);
             });
 
-            it('Should let one to transfer MGL tokens to whitelisted user', async () => {
+            it.only('Should let one to transfer MGL tokens to whitelisted user', async () => {
                 const signedData = hashData(OWNER, INVESTOR.address);
                 await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
 

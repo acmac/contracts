@@ -120,11 +120,11 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         emit UnlockOrganisation(msg.sender, _unlockAmount, _initialMglSupply);
     }
     
-    function onTransfer(address from, address to, uint256 value) public view {
+    function onTransfer(address from, address to, uint256 value) public {
         require(whiteList[to]);
     }
     
-    function onBurn(address from, uint256 value) public view {
+    function onBurn(address from, uint256 value) public {
         require(whiteList[from]);
     }
     
