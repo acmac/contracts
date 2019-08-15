@@ -2,7 +2,6 @@ const ethers = require('ethers');
 const etherlime = require('etherlime-lib');
 
 const DAIToken = require('./../build/MogulDAI');
-const MovieToken = require('./../build/MovieToken');
 const MogulToken = require('./../build/MogulToken');
 
 const Voting = require('./../build/Voting');
@@ -42,16 +41,14 @@ const deploy = async (network, secret) => {
     await daiContract.mint("0x4555A429Df5Cc32efa46BCb1412a3CD7Bf14b381", "100000000000000000000");
 
     // Deploy Movie Token
-    const movieTokenContractDeployed = await deployer.deploy(MovieToken, {});
 
-    await deployVoting(deployer, movieTokenContractDeployed);
+    await deployVoting(deployer);
 
     // Deploy Mogul Token
     const mogulTokenDeployed = await deployMogulToken(deployer);
 
-    const mogulOrganization = await deployMogulOrganization(deployer, movieTokenContractDeployed, daiContract.address, mogulTokenDeployed.contractAddress);
+    const mogulOrganization = await deployMogulOrganization(deployer, daiContract.address, mogulTokenDeployed.contractAddress);
 
-    await movieTokenContractDeployed.addMinter(mogulOrganization.contractAddress);
     await mogulTokenDeployed.addMinter(mogulOrganization.contractAddress);
     await mogulTokenDeployed.renounceMinter();
     await mogulTokenDeployed.addMovementNotifier(mogulOrganization.contractAddress);
@@ -96,7 +93,7 @@ let deployMogulToken = async function (deployer) {
     return mogulTokenDeployed;
 };
 
-let deployMogulOrganization = async function (deployer, movieToken, daiToken, mogulToken) {
+let deployMogulOrganization = async function (deployer, daiToken, mogulToken) {
 
     // Deploy Organization Bonding SQRT Math
     const bondingSqrtDeployTx = await deployer.signer.sendTransaction({
@@ -115,7 +112,6 @@ let deployMogulOrganization = async function (deployer, movieToken, daiToken, mo
         bondingMathContractDeployed.contractAddress,
         daiToken,
         mogulToken,
-        movieToken.contractAddress,
         MOGUL_BANK,
         WHITELISTER_ADDRESS
     );
@@ -123,7 +119,7 @@ let deployMogulOrganization = async function (deployer, movieToken, daiToken, mo
     return mogulOrganizationContractDeployed;
 };
 
-let deployVoting = async function (deployer, movieToken) {
+let deployVoting = async function (deployer) {
 
     const MOVIES = [
         '0x4d6f766965310000000000000000000000000000000000000000000000000000', // Movie1
@@ -144,7 +140,7 @@ let deployVoting = async function (deployer, movieToken) {
 
 
     // Deploy Voting
-    const votingContractDeployed = await deployer.deploy(Voting, {}, movieToken.contractAddress, MOVIES, tokenSqrtContractAddress);
+    const votingContractDeployed = await deployer.deploy(Voting, {}, MOVIES, tokenSqrtContractAddress);
     return votingContractDeployed;
 };
 

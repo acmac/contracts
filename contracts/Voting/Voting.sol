@@ -12,11 +12,11 @@ contract Voting is Ownable {
     using Convert for bytes;
     using SafeMath for uint256;
 
-    MogulDAI public mogulDAITokenInstance;
+    MogulDAI public daiTokenInstance;
     MogulToken public mogulTokenInstance;
-    address public sqrtInstance;
+    address public sqrtContract;
     uint256 public lastVotingDate = 0;
-    uint256 public currentRoundIndex = 0;
+    uint256 public currentRound = 0;
     
     struct Round {
         uint256 startDate;
@@ -25,13 +25,12 @@ contract Voting is Ownable {
         mapping (uint8 => Proposal) proposals;
         mapping (address => uint8) votedFor;
         uint256 maxInvestment;
-        bool isFinalized;
     }
     
     struct Proposal {
         bytes32 name;
         bytes32 metaData;
-        mapping (address => uint256) votersToVotes;
+        mapping (address => uint256) voterToVotes;
         uint256 totalVotes;
         address sponsorshipReceiver;
         uint256 requestedAmount;
@@ -39,24 +38,14 @@ contract Voting is Ownable {
     
     Round[] public rounds;
     
-    constructor(address mogulTokenAddress, address _mogulDAITokenInstance, address sqrtContract) public {
-        require(sqrtContract != address(0), "constructor :: SQRT contract could not be an empty address");
-        require(mogulTokenAddress != address(0), "constructor :: Mogul token contract could not be an empty address");
-        require(_mogulDAITokenInstance != address(0), "constructor :: Mogul DAI token contract could not be an empty address");
+    constructor(address _mogulTokenAddress, address _daiTokenInstance, address _sqrtContract) public {
+        require(_sqrtContract != address(0), "constructor :: SQRT contract could not be an empty address");
+        require(_mogulTokenAddress != address(0), "constructor :: Mogul token contract could not be an empty address");
+        require(_daiTokenInstance != address(0), "constructor :: Mogul DAI token contract could not be an empty address");
         
-        mogulTokenInstance = MogulToken(mogulTokenAddress);
-        mogulDAITokenInstance = MogulDAI(_mogulDAITokenInstance);
-        sqrtInstance = sqrtContract;
-    }
-    
-    // Rating is calculated as => sqrt(voter tokens balance) => 1 token = 1 rating; 9 tokens = 3 rating
-    function __calculateRatingByTokens(uint256 tokens) private view returns(uint256){
-        // Call a Vyper SQRT contract in order to work with decimals in sqrt
-        (bool success, bytes memory data) = sqrtInstance.staticcall(abi.encodeWithSignature("tokens_sqrt(uint256)", tokens));
-        require(success);
-
-        uint rating = data.toUint256();
-        return rating;
+        mogulTokenInstance = MogulToken(_mogulTokenAddress);
+        daiTokenInstance = MogulDAI(_daiTokenInstance);
+        sqrtContract = _sqrtContract;
     }
     
     function createProposal(
@@ -72,27 +61,26 @@ contract Voting is Ownable {
         require(_startDate > lastVotingDate, "createProposal :: Start date must be after last voting date");
         require(_movieNames.length == _movieMetaData.length
             && _movieMetaData.length == _sponsorshipReceiver.length
-            && _sponsorshipReceiver.length == _requestedAmount.length);
+            && _sponsorshipReceiver.length == _requestedAmount.length, "createProposal :: proposals data count is different");
     
         uint256 largestInvestment = getLargestInvestment(_requestedAmount);
         
-        require(mogulDAITokenInstance.allowance(msg.sender, address(this)) >= largestInvestment, "createProposal :: Dai tokens are not approved");
+        require(daiTokenInstance.allowance(msg.sender, address(this)) >= largestInvestment, "createProposal :: Dai tokens are not approved");
         
-        mogulDAITokenInstance.transferFrom(msg.sender, address(this), largestInvestment);
+        daiTokenInstance.transferFrom(msg.sender, address(this), largestInvestment);
         
         if(lastVotingDate < _expirationDate) {
             lastVotingDate = _expirationDate;
         }
     
-        Round memory currentRound = Round({
+        Round memory currentRoundData = Round({
             proposalCount: uint8(_movieNames.length),
             startDate: _startDate,
             endDate: _expirationDate,
-            maxInvestment: largestInvestment,
-            isFinalized: false
+            maxInvestment: largestInvestment
             });
         
-        rounds.push(currentRound);
+        rounds.push(currentRoundData);
         
         for(uint8 i = 0; i < _movieNames.length; i++){
 
@@ -110,53 +98,50 @@ contract Voting is Ownable {
     }
     
     function vote(uint8 _movieId) public {
-        require(now >= rounds[currentRoundIndex].startDate && now <= rounds[currentRoundIndex].endDate, "vote :: now is not within a voting period for this round");
-        require(rounds[currentRoundIndex].votedFor[msg.sender] == 0 || rounds[currentRoundIndex].votedFor[msg.sender] == _movieId + 1, "vote :: user is not allowed to vote more than once");
-        require(rounds[currentRoundIndex].proposalCount > _movieId, "vote :: there is no such movie id in this round");
+        require(now >= rounds[currentRound].startDate && now <= rounds[currentRound].endDate, "vote :: now is not within a voting period for this round");
+        require(rounds[currentRound].votedFor[msg.sender] == 0 || rounds[currentRound].votedFor[msg.sender] == _movieId + 1, "vote :: user is not allowed to vote more than once");
+        require(rounds[currentRound].proposalCount > _movieId, "vote :: there is no such movie id in this round");
         
-        if (rounds[currentRoundIndex].votedFor[msg.sender] == _movieId + 1) {
-            rounds[currentRoundIndex].proposals[_movieId].totalVotes = rounds[currentRoundIndex].proposals[_movieId].totalVotes.sub(rounds[currentRoundIndex].proposals[_movieId].votersToVotes[msg.sender]);
+        if (rounds[currentRound].votedFor[msg.sender] == _movieId + 1) {
+            rounds[currentRound].proposals[_movieId].totalVotes = rounds[currentRound].proposals[_movieId].totalVotes.sub(rounds[currentRound].proposals[_movieId].voterToVotes[msg.sender]);
         }
         
         uint256 voterMogulBalance = mogulTokenInstance.balanceOf(msg.sender);
         uint256 rating = __calculateRatingByTokens(voterMogulBalance.mul(10));
         
-        rounds[currentRoundIndex].proposals[_movieId].votersToVotes[msg.sender] = rating;
-        rounds[currentRoundIndex].proposals[_movieId].totalVotes = rounds[currentRoundIndex].proposals[_movieId].totalVotes.add(rating);
+        rounds[currentRound].proposals[_movieId].voterToVotes[msg.sender] = rating;
+        rounds[currentRound].proposals[_movieId].totalVotes = rounds[currentRound].proposals[_movieId].totalVotes.add(rating);
         
         // we are using the first element /0/ for empty votes
-        rounds[currentRoundIndex].votedFor[msg.sender] = _movieId + 1;
+        rounds[currentRound].votedFor[msg.sender] = _movieId + 1;
         
     }
     
     function finalizeRound() public onlyOwner {
-        require(rounds[currentRoundIndex].endDate < now);
-        require(rounds.length > currentRoundIndex);
-        require(rounds[currentRoundIndex].isFinalized != true);
+        require(rounds[currentRound].endDate < now, "finalizeRound :: the round is not finished");
 
         uint256 mostVotes;
         uint8 WinnerMovieIndex;
 
-        for(uint8 i = 0; i < rounds[currentRoundIndex].proposalCount; i++) {
-            if(mostVotes < rounds[currentRoundIndex].proposals[i].totalVotes) {
-                mostVotes = rounds[currentRoundIndex].proposals[i].totalVotes;
+        for(uint8 i = 0; i < rounds[currentRound].proposalCount; i++) {
+            if(mostVotes < rounds[currentRound].proposals[i].totalVotes) {
+                mostVotes = rounds[currentRound].proposals[i].totalVotes;
                 WinnerMovieIndex = i;
             }
         }
 
-        uint256 remainingDAI = (rounds[currentRoundIndex].maxInvestment).sub(rounds[currentRoundIndex].proposals[WinnerMovieIndex].requestedAmount);
+        uint256 remainingDAI = (rounds[currentRound].maxInvestment).sub(rounds[currentRound].proposals[WinnerMovieIndex].requestedAmount);
 
-        mogulDAITokenInstance.transfer(rounds[currentRoundIndex].proposals[WinnerMovieIndex].sponsorshipReceiver, rounds[currentRoundIndex].proposals[WinnerMovieIndex].requestedAmount);
+        daiTokenInstance.transfer(rounds[currentRound].proposals[WinnerMovieIndex].sponsorshipReceiver, rounds[currentRound].proposals[WinnerMovieIndex].requestedAmount);
         if(remainingDAI > 0) {
-            mogulDAITokenInstance.transfer(owner(), remainingDAI);
+            daiTokenInstance.transfer(owner(), remainingDAI);
         }
 
-        rounds[currentRoundIndex].isFinalized = true;
-        currentRoundIndex++;
+        currentRound++;
     }
     
-    function getRoundInfo(uint256 _round) public view returns (uint256, uint256, uint8, bool){
-        return (rounds[_round].startDate, rounds[_round].endDate, rounds[_round].proposalCount, rounds[_round].isFinalized);
+    function getRoundInfo(uint256 _round) public view returns (uint256, uint256, uint8){
+        return (rounds[_round].startDate, rounds[_round].endDate, rounds[_round].proposalCount);
     }
     
     function getProposalInfo(uint256 _round, uint8 _proposal) public view returns (bytes32, bytes32, uint256, address, uint256){
@@ -165,6 +150,10 @@ contract Voting is Ownable {
         rounds[_round].proposals[_proposal].totalVotes,
         rounds[_round].proposals[_proposal].sponsorshipReceiver,
         rounds[_round].proposals[_proposal].requestedAmount);
+    }
+    
+    function getVotersVotesInfo(uint256 _round, uint8 _proposal, address _voter) public view returns (uint256){
+        return rounds[_round].proposals[_proposal].voterToVotes[_voter];
     }
     
     function getVoteInfo(uint256 _round, address _voterAddress) public view returns (uint8){
@@ -181,5 +170,15 @@ contract Voting is Ownable {
             }
         }
         return largestInvestment;
+    }
+    
+    // Rating is calculated as => sqrt(voter tokens balance) => 1 token = 1 rating; 9 tokens = 3 rating
+    function __calculateRatingByTokens(uint256 tokens) private view returns(uint256){
+        // Call a Vyper SQRT contract in order to work with decimals in sqrt
+        (bool success, bytes memory data) = sqrtContract.staticcall(abi.encodeWithSignature("tokens_sqrt(uint256)", tokens));
+        require(success);
+        
+        uint rating = data.toUint256();
+        return rating;
     }
 }
