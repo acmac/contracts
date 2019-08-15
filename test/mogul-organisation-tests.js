@@ -281,7 +281,7 @@ describe('Mogul Organisation Contract', function () {
                 assert.ok(!isWhitelisted);
             });
 
-            it.only('Should let one to transfer MGL tokens to whitelisted user', async () => {
+            it('Should let one to transfer MGL tokens to whitelisted user', async () => {
                 const signedData = hashData(OWNER, INVESTOR.address);
                 await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
 

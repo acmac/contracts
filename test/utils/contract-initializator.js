@@ -31,7 +31,6 @@ let deployMogulOrganization = async (mglDai) => {
         MOGUL_BANK,
         WHITELISTER);
 
-
     const votingContract = await getVotingContract(mogulToken.contractAddress, mglDai.contractAddress);
 
     await mogulToken.addMinter(mglOrganisationInstance.contractAddress);

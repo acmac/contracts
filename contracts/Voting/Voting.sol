@@ -3,17 +3,16 @@ pragma solidity ^0.5.3;
 import "./../Math/Convert.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "../Tokens/MogulToken/MogulToken.sol";
-import "../Tokens/MogulDAI/MogulDAI.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 
 
-contract Voting is Ownable, MovementNotifier {
+contract Voting is Ownable {
     
     using Convert for bytes;
     using SafeMath for uint256;
 
-    MogulDAI public daiTokenInstance;
-    MogulToken public mogulTokenInstance;
+    IERC20 public daiTokenInstance;
+    IERC20 public mogulTokenInstance;
     address public sqrtContract;
     uint256 public lastVotingDate = 0;
     uint256 public currentRound = 0;
@@ -38,13 +37,17 @@ contract Voting is Ownable, MovementNotifier {
     
     Round[] public rounds;
     
+    event ProposalCreated(uint256 indexed roundID, uint8 proposalsCount, uint256 startDate, uint256 endDate);
+    event Voted(uint256 indexed roundID, address voter, uint8 propolsalID);
+    event RoundFinalized(uint256 indexed roundID, uint8 winnerID);
+    
     constructor(address _mogulTokenAddress, address _daiTokenInstance, address _sqrtContract) public {
         require(_sqrtContract != address(0), "constructor :: SQRT contract could not be an empty address");
         require(_mogulTokenAddress != address(0), "constructor :: Mogul token contract could not be an empty address");
         require(_daiTokenInstance != address(0), "constructor :: Mogul DAI token contract could not be an empty address");
         
-        mogulTokenInstance = MogulToken(_mogulTokenAddress);
-        daiTokenInstance = MogulDAI(_daiTokenInstance);
+        mogulTokenInstance = IERC20(_mogulTokenAddress);
+        daiTokenInstance = IERC20(_daiTokenInstance);
         sqrtContract = _sqrtContract;
     }
     
@@ -65,13 +68,9 @@ contract Voting is Ownable, MovementNotifier {
     
         uint256 largestInvestment = getLargestInvestment(_requestedAmount);
         
-        require(daiTokenInstance.allowance(msg.sender, address(this)) >= largestInvestment, "createProposal :: Dai tokens are not approved");
-        
         daiTokenInstance.transferFrom(msg.sender, address(this), largestInvestment);
         
-        if(lastVotingDate < _expirationDate) {
-            lastVotingDate = _expirationDate;
-        }
+        lastVotingDate = _expirationDate;
     
         Round memory currentRoundData = Round({
             proposalCount: uint8(_movieNames.length),
@@ -95,6 +94,8 @@ contract Voting is Ownable, MovementNotifier {
         });
             rounds[rounds.length - 1].proposals[i] = currentProposal;
         }
+        
+        emit ProposalCreated(rounds.length - 1, rounds[rounds.length - 1].proposalCount, _startDate, _expirationDate);
     }
     
     function vote(uint8 _movieId) public {
@@ -115,6 +116,7 @@ contract Voting is Ownable, MovementNotifier {
         // we are using the first element /0/ for empty votes
         rounds[currentRound].votedFor[msg.sender] = _movieId + 1;
         
+        emit Voted(currentRound, msg.sender, _movieId);
     }
     
     function finalizeRound() public onlyOwner {
@@ -141,27 +143,24 @@ contract Voting is Ownable, MovementNotifier {
     }
     
     function onTransfer(address from, address to, uint256 value) public {
-//        if (rounds[currentRound].votedFor[from] > 0) {
-//            uint8 proposalIndex = rounds[currentRound].votedFor[from] - 1;
-//            uint256 votes = rounds[currentRound].proposals[proposalIndex].voterToVotes[from];
-//
-//            rounds[currentRound].proposals[proposalIndex].totalVotes = rounds[currentRound].proposals[proposalIndex].totalVotes.sub(votes);
-//            rounds[currentRound].proposals[proposalIndex].voterToVotes[from] = 0;
-//            rounds[currentRound].votedFor[from] = 0;
-//        }
+        if (rounds.length > 0) {
+            if (rounds[currentRound].votedFor[from] != 0
+            && rounds[currentRound].startDate >= now
+            && rounds[currentRound].endDate >= now) {
+                __revokeVote(from);
+            }
+        }
+        
     }
     
     function onBurn(address from, uint256 value) public {
-//        if (rounds[currentRound].votedFor[from] != 0
-//        && rounds[currentRound].startDate <= now
-//        && rounds[currentRound].endDate >= now) {
-//            uint8 proposalIndex = rounds[currentRound].votedFor[from] - 1;
-//            uint256 votes = rounds[currentRound].proposals[proposalIndex].voterToVotes[from];
-//
-//            rounds[currentRound].proposals[proposalIndex].totalVotes = rounds[currentRound].proposals[proposalIndex].totalVotes.sub(votes);
-//            rounds[currentRound].proposals[proposalIndex].voterToVotes[from] = 0;
-//            rounds[currentRound].votedFor[from] = 0;
-//        }
+        if (rounds.length > 0) {
+            if (rounds[currentRound].votedFor[from] != 0
+            && rounds[currentRound].startDate >= now
+            && rounds[currentRound].endDate >= now) {
+                __revokeVote(from);
+            }
+        }
     }
     
     function getRoundInfo(uint256 _round) public view returns (uint256, uint256, uint8){
@@ -204,5 +203,14 @@ contract Voting is Ownable, MovementNotifier {
         
         uint rating = data.toUint256();
         return rating;
+    }
+    
+    function __revokeVote(address from) private {
+        uint8 proposalIndex = rounds[currentRound].votedFor[from] - 1;
+        uint256 votes = rounds[currentRound].proposals[proposalIndex].voterToVotes[from];
+    
+        rounds[currentRound].proposals[proposalIndex].totalVotes = rounds[currentRound].proposals[proposalIndex].totalVotes.sub(votes);
+        rounds[currentRound].proposals[proposalIndex].voterToVotes[from] = 0;
+        rounds[currentRound].votedFor[from] = 0;
     }
 }

@@ -391,4 +391,52 @@ describe('Voting Contract', function () {
 
     });
 
+    describe('Revoke Vote', function () {
+
+        beforeEach(async () => {
+
+            mogulDAIInstance = await ContractInitializator.deployMglDai();
+            mogulOrganisationInstance = await ContractInitializator.deployMogulOrganization(mogulDAIInstance);
+            mogulTokenInstance = await ContractInitializator.getMogulToken(mogulOrganisationInstance, OWNER);
+
+            await ContractInitializator.mintDAI(mogulDAIInstance, OWNER.address, UNLOCK_AMOUNT);
+            await ContractInitializator.approveDAI(mogulDAIInstance, OWNER, mogulOrganisationInstance.contractAddress, UNLOCK_AMOUNT);
+
+            await ContractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, INVESTMENT_AMOUNT);
+            await ContractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
+
+            await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
+                gasLimit: 2000000
+            });
+
+            await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+
+            votingContract = await ContractInitializator.getVotingContract(mogulTokenInstance.address, mogulDAIInstance.contractAddress);
+
+            const blockInfo = await provider.getBlock();
+            startDate = blockInfo.timestamp + oneDay;
+            endDate = startDate + sevenDays;
+
+            await mogulDAIInstance.mint(OWNER.address, MILLION_DAI.mul('5'));
+            await mogulDAIInstance.approve(votingContract.contractAddress, MILLION_DAI.mul('5'));
+
+            await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+                gasLimit: 2700000
+            });
+
+            await utils.setTimeTo(provider, startDate);
+
+            await votingContract.from(INVESTOR).vote(0);
+        });
+
+        it('Should finalize correctly', async () => {
+
+            // await mogulTokenInstance.approve(INVESTOR.address, ONE_ETH);
+            // await mogulTokenInstance.transfer(INVESTOR.address, ONE_ETH);
+
+        });
+
+
+    });
+
 });
