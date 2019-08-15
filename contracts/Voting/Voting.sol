@@ -41,6 +41,11 @@ contract Voting is Ownable {
     event Voted(uint256 indexed roundID, address voter, uint8 propolsalID);
     event RoundFinalized(uint256 indexed roundID, uint8 winnerID);
     
+    modifier onlyTokenAddress() {
+        require(msg.sender == address(mogulTokenContract), "movementNotifier :: permission denied");
+        _;
+    }
+    
     constructor(address _mogulTokenAddress, address _daiTokenInstance, address _sqrtContract) public {
         require(_sqrtContract != address(0), "constructor :: SQRT contract could not be an empty address");
         require(_mogulTokenAddress != address(0), "constructor :: Mogul token contract could not be an empty address");
@@ -142,7 +147,7 @@ contract Voting is Ownable {
         currentRound++;
     }
     
-    function onTransfer(address from, address to, uint256 value) public {
+    function onTransfer(address from, address to, uint256 value) public onlyTokenAddress {
         if (rounds.length > 0) {
             if (rounds[currentRound].votedFor[from] != 0
             && rounds[currentRound].startDate <= now
@@ -152,7 +157,7 @@ contract Voting is Ownable {
         }
     }
     
-    function onBurn(address from, uint256 value) public {
+    function onBurn(address from, uint256 value) public onlyTokenAddress {
         if (rounds.length > 0) {
             if (rounds[currentRound].votedFor[from] != 0
             && rounds[currentRound].startDate <= now

@@ -64,7 +64,7 @@ describe('Mogul Organisation Contract', function () {
 
             it('should return MovementNotifier implementation count', async () => {
                 let movementNotifiersCount = await mogulTokenInstance.getMovementNotifiersCount();
-                assert.strictEqual(movementNotifiersCount.toString(), "2")
+                assert.strictEqual(movementNotifiersCount.toString(), "1")
             });
 
             it('should add MovementNotifier implementation address', async () => {

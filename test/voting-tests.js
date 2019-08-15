@@ -444,6 +444,10 @@ describe('Voting Contract', function () {
 
         });
 
+        it('Should revert if other than token contract tries to revoke vote', async () => {
+            await assert.revert(votingContract.onTransfer(INVESTOR.address, OWNER.address, 0));
+        });
+
     });
 
 });
