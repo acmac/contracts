@@ -3,7 +3,7 @@ pragma solidity ^0.5.3;
 import "./../Math/Convert.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 
 
 contract Voting is Ownable {
@@ -11,8 +11,8 @@ contract Voting is Ownable {
     using Convert for bytes;
     using SafeMath for uint256;
 
-    ERC20 public daiTokenInstance;
-    ERC20 public mogulTokenInstance;
+    IERC20 public daiTokenInstance;
+    IERC20 public mogulTokenInstance;
     address public sqrtContract;
     uint256 public lastVotingDate = 0;
     uint256 public currentRound = 0;
@@ -46,8 +46,8 @@ contract Voting is Ownable {
         require(_mogulTokenAddress != address(0), "constructor :: Mogul token contract could not be an empty address");
         require(_daiTokenInstance != address(0), "constructor :: Mogul DAI token contract could not be an empty address");
         
-        mogulTokenInstance = ERC20(_mogulTokenAddress);
-        daiTokenInstance = ERC20(_daiTokenInstance);
+        mogulTokenInstance = IERC20(_mogulTokenAddress);
+        daiTokenInstance = IERC20(_daiTokenInstance);
         sqrtContract = _sqrtContract;
     }
     
