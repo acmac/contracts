@@ -11,8 +11,8 @@ contract Voting is Ownable {
     using Convert for bytes;
     using SafeMath for uint256;
 
-    IERC20 public daiTokenInstance;
-    IERC20 public mogulTokenInstance;
+    IERC20 public daiTokenContract;
+    IERC20 public mogulTokenContract;
     address public sqrtContract;
     uint256 public lastVotingDate = 0;
     uint256 public currentRound = 0;
@@ -46,8 +46,8 @@ contract Voting is Ownable {
         require(_mogulTokenAddress != address(0), "constructor :: Mogul token contract could not be an empty address");
         require(_daiTokenInstance != address(0), "constructor :: Mogul DAI token contract could not be an empty address");
         
-        mogulTokenInstance = IERC20(_mogulTokenAddress);
-        daiTokenInstance = IERC20(_daiTokenInstance);
+        mogulTokenContract = IERC20(_mogulTokenAddress);
+        daiTokenContract = IERC20(_daiTokenInstance);
         sqrtContract = _sqrtContract;
     }
     
@@ -68,7 +68,7 @@ contract Voting is Ownable {
     
         uint256 largestInvestment = getLargestInvestment(_requestedAmount);
         
-        daiTokenInstance.transferFrom(msg.sender, address(this), largestInvestment);
+        daiTokenContract.transferFrom(msg.sender, address(this), largestInvestment);
         
         lastVotingDate = _expirationDate;
     
@@ -107,7 +107,7 @@ contract Voting is Ownable {
             rounds[currentRound].proposals[_movieId].totalVotes = rounds[currentRound].proposals[_movieId].totalVotes.sub(rounds[currentRound].proposals[_movieId].voterToVotes[msg.sender]);
         }
         
-        uint256 voterMogulBalance = mogulTokenInstance.balanceOf(msg.sender);
+        uint256 voterMogulBalance = mogulTokenContract.balanceOf(msg.sender);
         uint256 rating = __calculateRatingByTokens(voterMogulBalance.mul(10));
         
         rounds[currentRound].proposals[_movieId].voterToVotes[msg.sender] = rating;
@@ -134,9 +134,9 @@ contract Voting is Ownable {
 
         uint256 remainingDAI = (rounds[currentRound].maxInvestment).sub(rounds[currentRound].proposals[winnerMovieIndex].requestedAmount);
 
-        daiTokenInstance.transfer(rounds[currentRound].proposals[winnerMovieIndex].sponsorshipReceiver, rounds[currentRound].proposals[winnerMovieIndex].requestedAmount);
+        daiTokenContract.transfer(rounds[currentRound].proposals[winnerMovieIndex].sponsorshipReceiver, rounds[currentRound].proposals[winnerMovieIndex].requestedAmount);
         if(remainingDAI > 0) {
-            daiTokenInstance.transfer(owner(), remainingDAI);
+            daiTokenContract.transfer(owner(), remainingDAI);
         }
 
         currentRound++;
@@ -145,18 +145,17 @@ contract Voting is Ownable {
     function onTransfer(address from, address to, uint256 value) public {
         if (rounds.length > 0) {
             if (rounds[currentRound].votedFor[from] != 0
-            && rounds[currentRound].startDate >= now
+            && rounds[currentRound].startDate <= now
             && rounds[currentRound].endDate >= now) {
                 __revokeVote(from);
             }
         }
-        
     }
     
     function onBurn(address from, uint256 value) public {
         if (rounds.length > 0) {
             if (rounds[currentRound].votedFor[from] != 0
-            && rounds[currentRound].startDate >= now
+            && rounds[currentRound].startDate <= now
             && rounds[currentRound].endDate >= now) {
                 __revokeVote(from);
             }
@@ -165,6 +164,10 @@ contract Voting is Ownable {
     
     function getRoundInfo(uint256 _round) public view returns (uint256, uint256, uint8){
         return (rounds[_round].startDate, rounds[_round].endDate, rounds[_round].proposalCount);
+    }
+    
+    function getRounds() public view returns (uint256){
+        return rounds.length;
     }
     
     function getProposalInfo(uint256 _round, uint8 _proposal) public view returns (bytes32, bytes32, uint256, address, uint256){
@@ -206,6 +209,7 @@ contract Voting is Ownable {
     }
     
     function __revokeVote(address from) private {
+        
         uint8 proposalIndex = rounds[currentRound].votedFor[from] - 1;
         uint256 votes = rounds[currentRound].proposals[proposalIndex].voterToVotes[from];
     
