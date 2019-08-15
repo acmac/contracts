@@ -13,12 +13,11 @@ describe('Voting Contract', function () {
     const oneDay = 86400;
 
     const OWNER = accounts[0].signer;
-    const VOTER = accounts[1].signer;
     const INVESTOR = accounts[9].signer;
 
 
     const ONE_DAI = ethers.utils.bigNumberify("1000000000000000000");
-    const MILION_DAI = ONE_DAI.mul("1000000");
+    const MILLION_DAI = ONE_DAI.mul("1000000");
 
     const SPONSORSHIP_RECEIVER_1 = accounts[2].signer;
     const SPONSORSHIP_RECEIVER_2 = accounts[3].signer;
@@ -53,11 +52,11 @@ describe('Voting Contract', function () {
     ];
 
     const MOVIE_REQUESTED_AMOUNT = [
-        MILION_DAI,
-        MILION_DAI.mul('2'),
-        MILION_DAI.mul('3'),
-        MILION_DAI.mul('4'),
-        MILION_DAI.mul('5')
+        MILLION_DAI,
+        MILLION_DAI.mul('2'),
+        MILLION_DAI.mul('3'),
+        MILLION_DAI.mul('4'),
+        MILLION_DAI.mul('5')
     ];
 
     const ONE_ETH = ethers.utils.bigNumberify("1000000000000000000");
@@ -110,8 +109,8 @@ describe('Voting Contract', function () {
             mogulDAIInstance = await ContractInitializator.deployMglDai();
 
             votingContract = await ContractInitializator.getVotingContract(mogulTokenContract.contractAddress, mogulDAIInstance.contractAddress);
-            await mogulDAIInstance.mint(OWNER.address, MILION_DAI.mul('5'));
-            await mogulDAIInstance.approve(votingContract.contractAddress, MILION_DAI.mul('5'));
+            await mogulDAIInstance.mint(OWNER.address, MILLION_DAI.mul('5'));
+            await mogulDAIInstance.approve(votingContract.contractAddress, MILLION_DAI.mul('5'));
 
             const blockInfo = await provider.getBlock();
             startDate = blockInfo.timestamp + oneDay;
@@ -210,12 +209,12 @@ describe('Voting Contract', function () {
         it('Should revert if movie descriptions are less or more than other properties', async () => {
 
             const MORE_MOVIE_REQUESTED_AMOUNT = [
-                MILION_DAI,
-                MILION_DAI.mul('2'),
-                MILION_DAI.mul('3'),
-                MILION_DAI.mul('4'),
-                MILION_DAI.mul('5'),
-                MILION_DAI.mul('6')
+                MILLION_DAI,
+                MILLION_DAI.mul('2'),
+                MILLION_DAI.mul('3'),
+                MILLION_DAI.mul('4'),
+                MILLION_DAI.mul('5'),
+                MILLION_DAI.mul('6')
             ];
             await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MORE_MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
@@ -251,8 +250,8 @@ describe('Voting Contract', function () {
             startDate = blockInfo.timestamp + oneDay;
             endDate = startDate + sevenDays;
 
-            await mogulDAIInstance.mint(OWNER.address, MILION_DAI.mul('5'));
-            await mogulDAIInstance.approve(votingContract.contractAddress, MILION_DAI.mul('5'));
+            await mogulDAIInstance.mint(OWNER.address, MILLION_DAI.mul('5'));
+            await mogulDAIInstance.approve(votingContract.contractAddress, MILLION_DAI.mul('5'));
 
             await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
@@ -263,7 +262,7 @@ describe('Voting Contract', function () {
 
         it('Should vote correctly', async () => {
 
-            await votingContract.from(INVESTOR).vote(0, 0);
+            await votingContract.from(INVESTOR).vote(0);
 
             let voteInfo = await votingContract.getVoteInfo(0, INVESTOR.address);
 
@@ -276,12 +275,12 @@ describe('Voting Contract', function () {
             let investorMogulTokens = await mogulTokenInstance.balanceOf(INVESTOR.address);
             let expectedRating = calculationHelper.sqrtTokens(investorMogulTokens.mul(10));
 
-            assert.strictEqual(proposalInfo[2].toString(), expectedRating.toString());
+            assert.strictEqual(proposalInfo[2].toString().substring(0, 10), expectedRating.toString());
         });
 
         it('Should allow voter to vote again for the same movie and recalculate his vote weight correctly', async () => {
 
-            await votingContract.from(INVESTOR).vote(0, 0);
+            await votingContract.from(INVESTOR).vote(0);
 
             await ContractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, INVESTMENT_AMOUNT);
             await ContractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
@@ -290,7 +289,7 @@ describe('Voting Contract', function () {
                 gasLimit: 2700000
             });
 
-            await votingContract.from(INVESTOR).vote(0, 0);
+            await votingContract.from(INVESTOR).vote(0);
 
             let voteInfo = await votingContract.getVoteInfo(0, INVESTOR.address);
 
@@ -303,23 +302,22 @@ describe('Voting Contract', function () {
             let investorMogulTokens = await mogulTokenInstance.balanceOf(INVESTOR.address);
             let expectedRating = calculationHelper.sqrtTokens(investorMogulTokens.mul(10));
 
-            assert.strictEqual(proposalInfo[2].toString(), expectedRating.toString());
+            assert.strictEqual(proposalInfo[2].toString().substring(0, 10), expectedRating.toString());
         });
 
         it('Should revert if one tries to change his vote', async () => {
-            await votingContract.from(INVESTOR).vote(0, 0);
-            await assert.revert(votingContract.from(INVESTOR).vote(0, 2));
+            await votingContract.from(INVESTOR).vote(0);
+            await assert.revert(votingContract.from(INVESTOR).vote(2));
         });
 
         it('Should revert if one tries to vote outside voting period', async () => {
             await utils.setTimeTo(provider, endDate + 1);
-            await assert.revert(votingContract.from(INVESTOR).vote(0, 1));
+            await assert.revert(votingContract.from(INVESTOR).vote(1));
         });
 
         it('Should revert if one tries to vote to non-existing movie id', async () => {
-            await assert.revert(votingContract.from(INVESTOR).vote(0, 5));
+            await assert.revert(votingContract.from(INVESTOR).vote(5));
         });
-
 
     });
 
@@ -349,8 +347,8 @@ describe('Voting Contract', function () {
             startDate = blockInfo.timestamp + oneDay;
             endDate = startDate + sevenDays;
 
-            await mogulDAIInstance.mint(OWNER.address, MILION_DAI.mul('5'));
-            await mogulDAIInstance.approve(votingContract.contractAddress, MILION_DAI.mul('5'));
+            await mogulDAIInstance.mint(OWNER.address, MILLION_DAI.mul('5'));
+            await mogulDAIInstance.approve(votingContract.contractAddress, MILLION_DAI.mul('5'));
 
             await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
@@ -358,16 +356,16 @@ describe('Voting Contract', function () {
 
             await utils.setTimeTo(provider, startDate);
 
-            await votingContract.from(INVESTOR).vote(0, 0);
+            await votingContract.from(INVESTOR).vote(0);
         });
 
         it('Should finalize correctly', async () => {
-            let winnerMovieSponsorship = MILION_DAI;
-            let largestMovieSponsorship = MILION_DAI.mul(5);
+            let winnerMovieSponsorship = MILLION_DAI;
+            let largestMovieSponsorship = MILLION_DAI.mul(5);
             let sponsorshipReceiverBefore = await mogulDAIInstance.balanceOf(SPONSORSHIP_RECEIVER_1.address);
 
             await utils.setTimeTo(provider, endDate + 1);
-            await votingContract.finalizeRound(0);
+            await votingContract.finalizeRound();
             let roundInfo = await votingContract.getRoundInfo(0);
 
             assert.ok(roundInfo[3]);
@@ -378,18 +376,22 @@ describe('Voting Contract', function () {
             assert(sponsorshipReceiverAfter.eq(sponsorshipReceiverBefore.add(winnerMovieSponsorship)));
             assert(ownerBalanceAfter.eq(largestMovieSponsorship.sub(winnerMovieSponsorship)));
 
+            let currentRound = await votingContract.currentRoundIndex();
+            assert(currentRound.eq(1));
+
         });
 
         it('Should not allow to finalize finalized round', async () => {
             await utils.setTimeTo(provider, endDate + 1);
-            await votingContract.finalizeRound(0);
-            await assert.revert(votingContract.finalizeRound(0));
+            await votingContract.finalizeRound();
+            await assert.revert(votingContract.finalizeRound());
 
         });
 
         it('Should not allow to finalize round within voting period', async () => {
-            await assert.revert(votingContract.finalizeRound(0));
+            await assert.revert(votingContract.finalizeRound());
         });
 
     });
+
 });

@@ -16,6 +16,7 @@ contract Voting is Ownable {
     MogulToken public mogulTokenInstance;
     address public sqrtInstance;
     uint256 public lastVotingDate = 0;
+    uint256 public currentRoundIndex = 0;
     
     struct Round {
         uint256 startDate;
@@ -108,50 +109,50 @@ contract Voting is Ownable {
         }
     }
     
-    // TODO: implement currentRound variable
-    function vote(uint256 _round, uint8 _movieId) public {
-        require(now >= rounds[_round].startDate && now <= rounds[_round].endDate, "vote :: now is not within a voting period for this round");
-        require(rounds[_round].votedFor[msg.sender] == 0 || rounds[_round].votedFor[msg.sender] == _movieId + 1, "vote :: user is not allowed to vote more than once");
-        require(rounds[_round].proposalCount > _movieId, "vote :: there is no such movie id in this round");
+    function vote(uint8 _movieId) public {
+        require(now >= rounds[currentRoundIndex].startDate && now <= rounds[currentRoundIndex].endDate, "vote :: now is not within a voting period for this round");
+        require(rounds[currentRoundIndex].votedFor[msg.sender] == 0 || rounds[currentRoundIndex].votedFor[msg.sender] == _movieId + 1, "vote :: user is not allowed to vote more than once");
+        require(rounds[currentRoundIndex].proposalCount > _movieId, "vote :: there is no such movie id in this round");
         
-        if (rounds[_round].votedFor[msg.sender] == _movieId + 1) {
-            rounds[_round].proposals[_movieId].totalVotes = rounds[_round].proposals[_movieId].totalVotes.sub(rounds[_round].proposals[_movieId].votersToVotes[msg.sender]);
+        if (rounds[currentRoundIndex].votedFor[msg.sender] == _movieId + 1) {
+            rounds[currentRoundIndex].proposals[_movieId].totalVotes = rounds[currentRoundIndex].proposals[_movieId].totalVotes.sub(rounds[currentRoundIndex].proposals[_movieId].votersToVotes[msg.sender]);
         }
         
         uint256 voterMogulBalance = mogulTokenInstance.balanceOf(msg.sender);
         uint256 rating = __calculateRatingByTokens(voterMogulBalance.mul(10));
         
-        rounds[_round].proposals[_movieId].votersToVotes[msg.sender] = rating;
-        rounds[_round].proposals[_movieId].totalVotes = rounds[_round].proposals[_movieId].totalVotes.add(rating);
+        rounds[currentRoundIndex].proposals[_movieId].votersToVotes[msg.sender] = rating;
+        rounds[currentRoundIndex].proposals[_movieId].totalVotes = rounds[currentRoundIndex].proposals[_movieId].totalVotes.add(rating);
         
         // we are using the first element /0/ for empty votes
-        rounds[_round].votedFor[msg.sender] = _movieId + 1;
+        rounds[currentRoundIndex].votedFor[msg.sender] = _movieId + 1;
         
     }
     
-    function finalizeRound(uint256 _round) public onlyOwner {
-        require(rounds[_round].endDate < now);
-        require(rounds.length > _round);
-        require(rounds[_round].isFinalized != true);
+    function finalizeRound() public onlyOwner {
+        require(rounds[currentRoundIndex].endDate < now);
+        require(rounds.length > currentRoundIndex);
+        require(rounds[currentRoundIndex].isFinalized != true);
 
         uint256 mostVotes;
         uint8 WinnerMovieIndex;
 
-        for(uint8 i = 0; i < rounds[_round].proposalCount; i++) {
-            if(mostVotes < rounds[_round].proposals[i].totalVotes) {
-                mostVotes = rounds[_round].proposals[i].totalVotes;
+        for(uint8 i = 0; i < rounds[currentRoundIndex].proposalCount; i++) {
+            if(mostVotes < rounds[currentRoundIndex].proposals[i].totalVotes) {
+                mostVotes = rounds[currentRoundIndex].proposals[i].totalVotes;
                 WinnerMovieIndex = i;
             }
         }
 
-        uint256 remainingDAI = (rounds[_round].maxInvestment).sub(rounds[_round].proposals[WinnerMovieIndex].requestedAmount);
+        uint256 remainingDAI = (rounds[currentRoundIndex].maxInvestment).sub(rounds[currentRoundIndex].proposals[WinnerMovieIndex].requestedAmount);
 
-        mogulDAITokenInstance.transfer(rounds[_round].proposals[WinnerMovieIndex].sponsorshipReceiver, rounds[_round].proposals[WinnerMovieIndex].requestedAmount);
+        mogulDAITokenInstance.transfer(rounds[currentRoundIndex].proposals[WinnerMovieIndex].sponsorshipReceiver, rounds[currentRoundIndex].proposals[WinnerMovieIndex].requestedAmount);
         if(remainingDAI > 0) {
             mogulDAITokenInstance.transfer(owner(), remainingDAI);
         }
 
-        rounds[_round].isFinalized = true;
+        rounds[currentRoundIndex].isFinalized = true;
+        currentRoundIndex++;
     }
     
     function getRoundInfo(uint256 _round) public view returns (uint256, uint256, uint8, bool){

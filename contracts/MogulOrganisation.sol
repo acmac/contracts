@@ -22,7 +22,6 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     uint256 public initialInvestment = 0;
     uint256 public premintedMGL = 0;
     
-    uint256 constant public MOVIE_TO_MGL_RATE = 10; // 1 Mogul Token -> 10 Movie Tokens (Utility tokens)
     uint256 constant public DAI_RESERVE_REMAINDER = 5; // 20%
     uint256 constant public INITIAL_MGLTOKEN_SUPPLY = 1000000000000000000; // 1 Mogul Token
 

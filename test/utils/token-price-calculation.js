@@ -24,7 +24,7 @@ const sellCalc = (
 const sqrtTokens = (
     tokens
 ) => {
-    return (Math.sqrt(tokens) * 10000);
+    return Math.floor(Math.sqrt(tokens)).toString().substring(0, 10);
 };
 
 module.exports = {
