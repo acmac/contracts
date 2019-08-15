@@ -3,8 +3,7 @@ pragma solidity ^0.5.3;
 import "./../Math/Convert.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "../Tokens/MogulToken/MogulToken.sol";
-import "../Tokens/MogulDAI/MogulDAI.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 
 
 contract Voting is Ownable {
@@ -12,8 +11,8 @@ contract Voting is Ownable {
     using Convert for bytes;
     using SafeMath for uint256;
 
-    MogulDAI public daiTokenInstance;
-    MogulToken public mogulTokenInstance;
+    ERC20 public daiTokenInstance;
+    ERC20 public mogulTokenInstance;
     address public sqrtContract;
     uint256 public lastVotingDate = 0;
     uint256 public currentRound = 0;
@@ -38,13 +37,17 @@ contract Voting is Ownable {
     
     Round[] public rounds;
     
+    event ProposalCreated(uint256 roundID, uint8 proposalsCount, uint256 startDate, uint256 endDate);
+    event Voted(uint256 roundID, address voter, uint8 propolsalID);
+    event RoundFinalized(uint256 roundID, uint8 winnerID);
+    
     constructor(address _mogulTokenAddress, address _daiTokenInstance, address _sqrtContract) public {
         require(_sqrtContract != address(0), "constructor :: SQRT contract could not be an empty address");
         require(_mogulTokenAddress != address(0), "constructor :: Mogul token contract could not be an empty address");
         require(_daiTokenInstance != address(0), "constructor :: Mogul DAI token contract could not be an empty address");
         
-        mogulTokenInstance = MogulToken(_mogulTokenAddress);
-        daiTokenInstance = MogulDAI(_daiTokenInstance);
+        mogulTokenInstance = ERC20(_mogulTokenAddress);
+        daiTokenInstance = ERC20(_daiTokenInstance);
         sqrtContract = _sqrtContract;
     }
     
@@ -65,13 +68,9 @@ contract Voting is Ownable {
     
         uint256 largestInvestment = getLargestInvestment(_requestedAmount);
         
-        require(daiTokenInstance.allowance(msg.sender, address(this)) >= largestInvestment, "createProposal :: Dai tokens are not approved");
-        
         daiTokenInstance.transferFrom(msg.sender, address(this), largestInvestment);
         
-        if(lastVotingDate < _expirationDate) {
-            lastVotingDate = _expirationDate;
-        }
+        lastVotingDate = _expirationDate;
     
         Round memory currentRoundData = Round({
             proposalCount: uint8(_movieNames.length),
@@ -95,6 +94,8 @@ contract Voting is Ownable {
         });
             rounds[rounds.length - 1].proposals[i] = currentProposal;
         }
+        
+        emit ProposalCreated(rounds.length - 1, rounds[rounds.length - 1].proposalCount, _startDate, _expirationDate);
     }
     
     function vote(uint8 _movieId) public {
@@ -115,29 +116,32 @@ contract Voting is Ownable {
         // we are using the first element /0/ for empty votes
         rounds[currentRound].votedFor[msg.sender] = _movieId + 1;
         
+        emit Voted(currentRound, msg.sender, _movieId);
     }
     
     function finalizeRound() public onlyOwner {
         require(rounds[currentRound].endDate < now, "finalizeRound :: the round is not finished");
 
         uint256 mostVotes;
-        uint8 WinnerMovieIndex;
+        uint8 winnerMovieIndex;
 
         for(uint8 i = 0; i < rounds[currentRound].proposalCount; i++) {
             if(mostVotes < rounds[currentRound].proposals[i].totalVotes) {
                 mostVotes = rounds[currentRound].proposals[i].totalVotes;
-                WinnerMovieIndex = i;
+                winnerMovieIndex = i;
             }
         }
 
-        uint256 remainingDAI = (rounds[currentRound].maxInvestment).sub(rounds[currentRound].proposals[WinnerMovieIndex].requestedAmount);
+        uint256 remainingDAI = (rounds[currentRound].maxInvestment).sub(rounds[currentRound].proposals[winnerMovieIndex].requestedAmount);
 
-        daiTokenInstance.transfer(rounds[currentRound].proposals[WinnerMovieIndex].sponsorshipReceiver, rounds[currentRound].proposals[WinnerMovieIndex].requestedAmount);
+        daiTokenInstance.transfer(rounds[currentRound].proposals[winnerMovieIndex].sponsorshipReceiver, rounds[currentRound].proposals[winnerMovieIndex].requestedAmount);
         if(remainingDAI > 0) {
             daiTokenInstance.transfer(owner(), remainingDAI);
         }
 
         currentRound++;
+        
+        emit RoundFinalized(currentRound, winnerMovieIndex);
     }
     
     function getRoundInfo(uint256 _round) public view returns (uint256, uint256, uint8){
