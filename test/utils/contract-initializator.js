@@ -31,9 +31,9 @@ let deployMogulOrganization = async (mglDai) => {
         MOGUL_BANK,
         WHITELISTER);
 
-
     await mogulToken.addMinter(mglOrganisationInstance.contractAddress);
     await mogulToken.renounceMinter();
+
     await mogulToken.addMovementNotifier(mglOrganisationInstance.contractAddress);
 
     return mglOrganisationInstance;
@@ -49,8 +49,7 @@ let deployTokenSQRT = async () => {
 
 let getMogulToken = async (mogulOrganisationInstance, wallet) => {
     let mogulTokenAddress = await mogulOrganisationInstance.mogulToken();
-    let mogulTokenContract = new ethers.Contract(mogulTokenAddress, MogulToken.abi, deployerWallet.provider);
-    return mogulTokenContract.connect(wallet);
+    return  etherlime.ContractAt(MogulToken, mogulTokenAddress, wallet);
 
 };
 

@@ -65,11 +65,10 @@ describe('Voting Contract', function () {
     const INITIAL_MOGUL_SUPPLY = ONE_ETH.mul(5000000);
 
     let votingContract;
-    let mogulTokenContract;
 
     let mogulDAIInstance;
     let mogulOrganisationInstance;
-    let mogulTokenInstance;
+    let mogulTokenContract;
 
     let startDate;
     let endDate;
@@ -93,7 +92,7 @@ describe('Voting Contract', function () {
 
         it('Should initialize the contract correctly', async () => {
             let owner = await votingContract.owner();
-            let _mogulTokenInstance = await votingContract.mogulTokenInstance();
+            let _mogulTokenInstance = await votingContract.mogulTokenContract();
 
             assert.strictEqual(owner, OWNER.address);
             assert.strictEqual(_mogulTokenInstance, mogulTokenContract.contractAddress);
@@ -229,7 +228,7 @@ describe('Voting Contract', function () {
 
             mogulDAIInstance = await ContractInitializator.deployMglDai();
             mogulOrganisationInstance = await ContractInitializator.deployMogulOrganization(mogulDAIInstance);
-            mogulTokenInstance = await ContractInitializator.getMogulToken(mogulOrganisationInstance, OWNER);
+            mogulTokenContract = await ContractInitializator.getMogulToken(mogulOrganisationInstance, OWNER);
 
             await ContractInitializator.mintDAI(mogulDAIInstance, OWNER.address, UNLOCK_AMOUNT);
             await ContractInitializator.approveDAI(mogulDAIInstance, OWNER, mogulOrganisationInstance.contractAddress, UNLOCK_AMOUNT);
@@ -244,7 +243,7 @@ describe('Voting Contract', function () {
 
             await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
 
-            votingContract = await ContractInitializator.getVotingContract(mogulTokenInstance.address, mogulDAIInstance.contractAddress);
+            votingContract = await ContractInitializator.getVotingContract(mogulTokenContract.contractAddress, mogulDAIInstance.contractAddress);
 
             const blockInfo = await provider.getBlock();
             startDate = blockInfo.timestamp + oneDay;
@@ -273,7 +272,7 @@ describe('Voting Contract', function () {
             let proposalInfo = await votingContract.getProposalInfo(0, 0);
             let voterVoteInfo = await votingContract.getVotersVotesInfo(0, 0, INVESTOR.address);
 
-            let investorMogulTokens = await mogulTokenInstance.balanceOf(INVESTOR.address);
+            let investorMogulTokens = await mogulTokenContract.balanceOf(INVESTOR.address);
             let expectedRating = calculationHelper.sqrtTokens(investorMogulTokens.mul(10));
 
             assert.strictEqual(proposalInfo[2].toString().substring(0, 10), expectedRating.toString());
@@ -301,7 +300,7 @@ describe('Voting Contract', function () {
 
             let proposalInfo = await votingContract.getProposalInfo(0, 0);
 
-            let investorMogulTokens = await mogulTokenInstance.balanceOf(INVESTOR.address);
+            let investorMogulTokens = await mogulTokenContract.balanceOf(INVESTOR.address);
             let expectedRating = calculationHelper.sqrtTokens(investorMogulTokens.mul(10));
 
             assert.strictEqual(proposalInfo[2].toString().substring(0, 10), expectedRating.toString());
@@ -329,7 +328,7 @@ describe('Voting Contract', function () {
 
             mogulDAIInstance = await ContractInitializator.deployMglDai();
             mogulOrganisationInstance = await ContractInitializator.deployMogulOrganization(mogulDAIInstance);
-            mogulTokenInstance = await ContractInitializator.getMogulToken(mogulOrganisationInstance, OWNER);
+            mogulTokenContract = await ContractInitializator.getMogulToken(mogulOrganisationInstance, OWNER);
 
             await ContractInitializator.mintDAI(mogulDAIInstance, OWNER.address, UNLOCK_AMOUNT);
             await ContractInitializator.approveDAI(mogulDAIInstance, OWNER, mogulOrganisationInstance.contractAddress, UNLOCK_AMOUNT);
@@ -343,7 +342,7 @@ describe('Voting Contract', function () {
 
             await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
 
-            votingContract = await ContractInitializator.getVotingContract(mogulTokenInstance.address, mogulDAIInstance.contractAddress);
+            votingContract = await ContractInitializator.getVotingContract(mogulTokenContract.contractAddress, mogulDAIInstance.contractAddress);
 
             const blockInfo = await provider.getBlock();
             startDate = blockInfo.timestamp + oneDay;
@@ -387,6 +386,66 @@ describe('Voting Contract', function () {
         it('Should revert if called by not owner', async () => {
             await utils.setTimeTo(provider, endDate + 1);
             await assert.revert(votingContract.from(INVESTOR).finalizeRound());
+        });
+
+    });
+
+    describe('Revoke Vote', function () {
+
+        beforeEach(async () => {
+
+            mogulDAIInstance = await ContractInitializator.deployMglDai();
+            mogulOrganisationInstance = await ContractInitializator.deployMogulOrganization(mogulDAIInstance);
+            mogulTokenContract = await ContractInitializator.getMogulToken(mogulOrganisationInstance, OWNER);
+
+            await ContractInitializator.mintDAI(mogulDAIInstance, OWNER.address, UNLOCK_AMOUNT);
+            await ContractInitializator.approveDAI(mogulDAIInstance, OWNER, mogulOrganisationInstance.contractAddress, UNLOCK_AMOUNT);
+
+            await ContractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, INVESTMENT_AMOUNT);
+            await ContractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
+
+            await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
+                gasLimit: 2000000
+            });
+
+            await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+            await mogulOrganisationInstance.setWhitelisted(OWNER.address, true);
+
+            votingContract = await ContractInitializator.getVotingContract(mogulTokenContract.contractAddress, mogulDAIInstance.contractAddress);
+            await mogulTokenContract.addMovementNotifier(votingContract.contractAddress);
+
+            const blockInfo = await provider.getBlock();
+            startDate = blockInfo.timestamp + oneDay;
+            endDate = startDate + sevenDays;
+
+            await mogulDAIInstance.mint(OWNER.address, MILLION_DAI.mul('5'));
+            await mogulDAIInstance.approve(votingContract.contractAddress, MILLION_DAI.mul('5'));
+
+            await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+                gasLimit: 2700000
+            });
+
+            await utils.setTimeTo(provider, startDate);
+
+            await votingContract.from(INVESTOR.address).vote(0);
+        });
+
+        it('Should revoke vote if one transfer his mogul tokens', async () => {
+            await mogulTokenContract.from(INVESTOR.address).transfer(OWNER.address, ONE_ETH);
+
+            let votes = await votingContract.getVotersVotesInfo(0, 0, INVESTOR.address);
+            let voteInfo = await votingContract.getVoteInfo(0, INVESTOR.address);
+            let roundInfo = await votingContract.getProposalInfo(0, 0);
+
+            assert(votes.eq(0));
+            assert.strictEqual(voteInfo, 0);
+            // roundInfo[2] => proposal total votes
+            assert(roundInfo[2].eq(0));
+
+        });
+
+        it('Should revert if other than token contract tries to revoke vote', async () => {
+            await assert.revert(votingContract.onTransfer(INVESTOR.address, OWNER.address, 0));
         });
 
     });
