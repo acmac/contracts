@@ -21,8 +21,15 @@ const sellCalc = (
     return reserveSupply * b;
 };
 
+const sqrtTokens = (
+    tokens
+) => {
+    return Math.floor(Math.sqrt(tokens)).toString().substring(0, 10);
+};
+
 module.exports = {
     buyCalc,
-    sellCalc
+    sellCalc,
+    sqrtTokens
 };
 

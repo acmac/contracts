@@ -2,7 +2,6 @@ const ethers = require('ethers');
 const etherlime = require('etherlime-lib');
 
 const DAIToken = require('./../build/MogulDAI');
-const MovieToken = require('./../build/MovieToken');
 const MogulToken = require('./../build/MogulToken');
 
 const Voting = require('./../build/Voting');
@@ -31,7 +30,6 @@ const DEPLOYERS = {
     TEST: (secret) => { return new etherlime.InfuraPrivateKeyDeployer(secret, 'ropsten', 'e7a6b9997e804bc6a91b8c8d6f1fd7d1') }
 };
 
-
 const deploy = async (network, secret) => {
 
     // // Change ENV in order to deploy on test net (Ropsten)
@@ -40,28 +38,29 @@ const deploy = async (network, secret) => {
 
     let daiExchangeContract = await deployDAIExchange(deployer, daiContract);
     await daiContract.addMinter(daiExchangeContract.contractAddress);
+    await daiContract.mint("0x4555A429Df5Cc32efa46BCb1412a3CD7Bf14b381", "100000000000000000000");
 
     // Deploy Movie Token
-    const movieTokenContractDeployed = await deployer.deploy(MovieToken, {});
 
-    await deployVoting(deployer, movieTokenContractDeployed);
+    await deployVoting(deployer);
 
     // Deploy Mogul Token
     const mogulTokenDeployed = await deployMogulToken(deployer);
 
-    const mogulOrganization = await deployMogulOrganization(deployer, movieTokenContractDeployed, daiContract.address, mogulTokenDeployed.contractAddress);
+    const mogulOrganization = await deployMogulOrganization(deployer, daiContract.address, mogulTokenDeployed.contractAddress);
 
-    await movieTokenContractDeployed.addMinter(mogulOrganization.contractAddress);
     await mogulTokenDeployed.addMinter(mogulOrganization.contractAddress);
     await mogulTokenDeployed.renounceMinter();
+    await mogulTokenDeployed.addMovementNotifier(mogulOrganization.contractAddress);
+    console.log("addMovementNotifier");
 
     await daiContract.approve(mogulOrganization.contractAddress, UNLOCK_AMOUNT, {
         gasLimit: 4700000
     });
-
     await mogulOrganization.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
         gasLimit: 4700000
     });
+    console.log("Done Done");
 };
 
 let getDeployer = function (env, secret) {
@@ -94,7 +93,7 @@ let deployMogulToken = async function (deployer) {
     return mogulTokenDeployed;
 };
 
-let deployMogulOrganization = async function (deployer, movieToken, daiToken, mogulToken) {
+let deployMogulOrganization = async function (deployer, daiToken, mogulToken) {
 
     // Deploy Organization Bonding SQRT Math
     const bondingSqrtDeployTx = await deployer.signer.sendTransaction({
@@ -113,7 +112,6 @@ let deployMogulOrganization = async function (deployer, movieToken, daiToken, mo
         bondingMathContractDeployed.contractAddress,
         daiToken,
         mogulToken,
-        movieToken.contractAddress,
         MOGUL_BANK,
         WHITELISTER_ADDRESS
     );
@@ -121,7 +119,7 @@ let deployMogulOrganization = async function (deployer, movieToken, daiToken, mo
     return mogulOrganizationContractDeployed;
 };
 
-let deployVoting = async function (deployer, movieToken) {
+let deployVoting = async function (deployer) {
 
     const MOVIES = [
         '0x4d6f766965310000000000000000000000000000000000000000000000000000', // Movie1
@@ -142,7 +140,7 @@ let deployVoting = async function (deployer, movieToken) {
 
 
     // Deploy Voting
-    const votingContractDeployed = await deployer.deploy(Voting, {}, movieToken.contractAddress, MOVIES, tokenSqrtContractAddress);
+    const votingContractDeployed = await deployer.deploy(Voting, {}, MOVIES, tokenSqrtContractAddress);
     return votingContractDeployed;
 };
 
