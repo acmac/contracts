@@ -70,8 +70,7 @@ contract Voting is Ownable {
         require(_movieNames.length == _movieMetaData.length
             && _movieMetaData.length == _sponsorshipReceiver.length
             && _sponsorshipReceiver.length == _requestedAmount.length, "createProposal :: proposals data count is different");
-    
-        uint256 largestInvestment = getLargestInvestment(_requestedAmount);
+            uint256 largestInvestment = getLargestInvestment(_requestedAmount);
         
         daiTokenContract.transferFrom(msg.sender, address(this), largestInvestment);
         
@@ -147,6 +146,12 @@ contract Voting is Ownable {
         currentRound++;
     }
     
+    function cancelRound() public onlyOwner {
+        
+        daiTokenContract.transfer(owner(), rounds[currentRound].maxInvestment);
+        currentRound++;
+    }
+    
     function onTransfer(address from, address to, uint256 value) public onlyTokenAddress {
         if (rounds.length > 0) {
             if (rounds[currentRound].votedFor[from] != 0
@@ -191,7 +196,7 @@ contract Voting is Ownable {
         return (rounds[_round].votedFor[_voterAddress]);
     }
     
-    function getLargestInvestment(uint256[] memory _requestedAmounts) private returns(uint256) {
+    function getLargestInvestment(uint256[] memory _requestedAmounts) private pure returns(uint256) {
         
         uint256 largestInvestment;
         

@@ -40,10 +40,6 @@ const deploy = async (network, secret) => {
     await daiContract.addMinter(daiExchangeContract.contractAddress);
     await daiContract.mint("0x4555A429Df5Cc32efa46BCb1412a3CD7Bf14b381", "100000000000000000000");
 
-    // Deploy Movie Token
-
-    await deployVoting(deployer);
-
     // Deploy Mogul Token
     const mogulTokenDeployed = await deployMogulToken(deployer);
 
@@ -53,6 +49,8 @@ const deploy = async (network, secret) => {
     await mogulTokenDeployed.renounceMinter();
     await mogulTokenDeployed.addMovementNotifier(mogulOrganization.contractAddress);
     console.log("addMovementNotifier");
+
+    await deployVoting(mogulTokenDeployed.contractAddress, daiContract.address, deployer);
 
     await daiContract.approve(mogulOrganization.contractAddress, UNLOCK_AMOUNT, {
         gasLimit: 4700000
@@ -119,29 +117,18 @@ let deployMogulOrganization = async function (deployer, daiToken, mogulToken) {
     return mogulOrganizationContractDeployed;
 };
 
-let deployVoting = async function (deployer) {
-
-    const MOVIES = [
-        '0x4d6f766965310000000000000000000000000000000000000000000000000000', // Movie1
-        '0x4d6f766965320000000000000000000000000000000000000000000000000000', // Movie2
-        '0x4d6f766965330000000000000000000000000000000000000000000000000000', // Movie3
-        '0x4d6f766965340000000000000000000000000000000000000000000000000000', // Movie4
-        '0x4d6f766965350000000000000000000000000000000000000000000000000000'  // Movie5
-    ];
-
-
+let deployVoting = async function (mogulTokenAddress, daiTokenAddress, deployer) {
     // Deploy Token SQRT Math
     const tokenSqrtDeployTx = await deployer.signer.sendTransaction({
         data: TokensSQRT.bytecode
     });
 
     await deployer.provider.waitForTransaction(tokenSqrtDeployTx.hash);
-    tokenSqrtContractAddress = (await deployer.provider.getTransactionReceipt(tokenSqrtDeployTx.hash)).contractAddress;
+    let tokenSqrtContractAddress = (await deployer.provider.getTransactionReceipt(tokenSqrtDeployTx.hash)).contractAddress;
 
 
     // Deploy Voting
-    const votingContractDeployed = await deployer.deploy(Voting, {}, MOVIES, tokenSqrtContractAddress);
-    return votingContractDeployed;
+    return await deployer.deploy(Voting, {}, mogulTokenAddress, daiTokenAddress, tokenSqrtContractAddress);
 };
 
 module.exports = { deploy };
