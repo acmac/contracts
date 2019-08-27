@@ -33,7 +33,7 @@ const DEPLOYERS = {
 const deploy = async (network, secret) => {
 
     // // Change ENV in order to deploy on test net (Ropsten)
-    const deployer = getDeployer(ENV.TEST, secret);
+    const deployer = getDeployer(ENV.LOCAL, secret);
     const daiContract = await getDAIContract(deployer);
 
     let daiExchangeContract = await deployDAIExchange(deployer, daiContract);

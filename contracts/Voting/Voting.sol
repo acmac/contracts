@@ -28,7 +28,6 @@ contract Voting is Ownable {
     
     struct Proposal {
         bytes32 name;
-        bytes32 metaData;
         mapping (address => uint256) voterToVotes;
         uint256 totalVotes;
         address sponsorshipReceiver;
@@ -40,6 +39,7 @@ contract Voting is Ownable {
     event ProposalCreated(uint256 indexed roundID, uint8 proposalsCount, uint256 startDate, uint256 endDate);
     event Voted(uint256 indexed roundID, address voter, uint8 propolsalID);
     event RoundFinalized(uint256 indexed roundID, uint8 winnerID);
+    event CancelRound(uint256 indexed roundID);
     
     modifier onlyTokenAddress() {
         require(msg.sender == address(mogulTokenContract), "movementNotifier :: permission denied");
@@ -58,7 +58,6 @@ contract Voting is Ownable {
     
     function createProposal(
         bytes32[] memory _movieNames,
-        bytes32[] memory _movieMetaData,
         address[] memory _sponsorshipReceiver,
         uint256[] memory _requestedAmount,
         uint256 _startDate,
@@ -67,8 +66,7 @@ contract Voting is Ownable {
         require(_startDate >= now, "createProposal :: Start date cannot be in the past");
         require(_expirationDate > _startDate, "createProposal :: Start date cannot be after expiration date");
         require(_startDate > lastVotingDate, "createProposal :: Start date must be after last voting date");
-        require(_movieNames.length == _movieMetaData.length
-            && _movieMetaData.length == _sponsorshipReceiver.length
+        require(_movieNames.length == _sponsorshipReceiver.length
             && _sponsorshipReceiver.length == _requestedAmount.length, "createProposal :: proposals data count is different");
             uint256 largestInvestment = getLargestInvestment(_requestedAmount);
         
@@ -90,7 +88,6 @@ contract Voting is Ownable {
             Proposal memory currentProposal = Proposal({
 
             name: _movieNames[i],
-            metaData: _movieMetaData[i],
             totalVotes: 0,
             sponsorshipReceiver: _sponsorshipReceiver[i],
             requestedAmount: _requestedAmount[i]
@@ -149,6 +146,9 @@ contract Voting is Ownable {
     function cancelRound() public onlyOwner {
         
         daiTokenContract.transfer(owner(), rounds[currentRound].maxInvestment);
+        
+        emit CancelRound(currentRound);
+    
         currentRound++;
     }
     
@@ -180,9 +180,8 @@ contract Voting is Ownable {
         return rounds.length;
     }
     
-    function getProposalInfo(uint256 _round, uint8 _proposal) public view returns (bytes32, bytes32, uint256, address, uint256){
+    function getProposalInfo(uint256 _round, uint8 _proposal) public view returns (bytes32, uint256, address, uint256){
         return (rounds[_round].proposals[_proposal].name,
-        rounds[_round].proposals[_proposal].metaData,
         rounds[_round].proposals[_proposal].totalVotes,
         rounds[_round].proposals[_proposal].sponsorshipReceiver,
         rounds[_round].proposals[_proposal].requestedAmount);

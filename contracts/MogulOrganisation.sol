@@ -18,13 +18,14 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
 
     address public mogulBank;
 
-    uint256 public totalDAIInvestments = 0;
     uint256 public initialInvestment = 0;
     uint256 public premintedMGL = 0;
     
     uint256 constant public DAI_RESERVE_REMAINDER = 5; // 20%
-    uint256 constant public INITIAL_MGLTOKEN_SUPPLY = 1000000000000000000; // 1 Mogul Token
-
+    
+    enum State {LIVE, CLOSED}
+    State public state;
+    
     event Invest(address investor, uint256 amount);
     event Withdraw(address investor, uint256 amount);
     event UnlockOrganisation(address unlocker, uint256 initialAmount, uint256 initialMglSupply);
@@ -45,7 +46,7 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     }
     
     function invest(uint256 _daiAmount, bytes memory signedData) public {
-        require(totalDAIInvestments > 0, "invest:: Organisation is not unlocked for investments yet");
+        require(mogulDAI.balanceOf(address(this)) > 0, "invest:: Organisation is not unlocked for investments yet");
         require(mogulDAI.allowance(msg.sender, address(this)) >= _daiAmount, "invest:: Investor tries to invest with unapproved DAI amount");
         
         if (!whiteList[msg.sender]) {
@@ -60,9 +61,7 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         mogulDAI.transferFrom(msg.sender, mogulBank, _daiAmount.sub(reserveDAIAmount));
 
         mogulToken.mint(msg.sender, mglTokensToMint);
-
-        totalDAIInvestments = totalDAIInvestments.add(_daiAmount);
-
+        
         emit Invest(msg.sender, _daiAmount);
     }
     
@@ -72,7 +71,6 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         uint256 daiToReturn = bondingMath.calcTokenSell(mogulToken.totalSupply(), mogulDAI.balanceOf(address(this)), _amountMGL);
         
         mogulDAI.transfer(msg.sender, daiToReturn);
-        totalDAIInvestments = totalDAIInvestments.sub(daiToReturn);
         
         mogulToken.burnFrom(msg.sender, _amountMGL);
 
@@ -90,7 +88,7 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     
     function payDividends(uint256 dividendAmount, uint8 dividendRatio)  public {
         require(dividendRatio <= 100, "dividendRatio is higher than maximum allowed");
-        require(totalDAIInvestments > 0, "payDividends:: Organisation is not unlocked for dividends payment yet");
+        require(mogulDAI.balanceOf(address(this)) > 0, "payDividends:: Organisation is not unlocked for dividends payment yet");
         require(mogulDAI.allowance(msg.sender, address(this)) >= dividendAmount, "payDividends:: payer tries to pay with unapproved amount");
         
         uint256 reserveAmount = (dividendAmount.mul(dividendRatio)).div(100);
@@ -98,13 +96,11 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         mogulDAI.transferFrom(msg.sender, address(this), reserveAmount);
         mogulDAI.transferFrom(msg.sender, mogulBank, dividendAmount.sub(reserveAmount));
         
-        totalDAIInvestments = totalDAIInvestments.add(dividendAmount);
-        
         emit DividendPayed(msg.sender, dividendAmount);
     }
     
     function unlockOrganisation(uint256 _unlockAmount, uint256 _initialMglSupply) public {
-        require(totalDAIInvestments == 0, "unlockOrganisation:: Organization is already unlocked");
+        require(mogulDAI.balanceOf(address(this)) == 0, "unlockOrganisation:: Organization is already unlocked");
         require(mogulDAI.allowance(msg.sender, address(this)) >= _unlockAmount, "unlockOrganisation:: Unlocker tries to unlock with unapproved amount");
 
         mogulDAI.transferFrom(msg.sender, address(this), _unlockAmount.div(DAI_RESERVE_REMAINDER));
@@ -113,11 +109,20 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         initialInvestment = _unlockAmount;
         premintedMGL = _initialMglSupply;
         
-        totalDAIInvestments = _unlockAmount;
-    
         mogulToken.mint(msg.sender, _initialMglSupply);
-        
+    
+        state = State.LIVE;
+    
         emit UnlockOrganisation(msg.sender, _unlockAmount, _initialMglSupply);
+    }
+    
+    function close() public onlyOwner {
+        uint256 investments = mogulDAI.balanceOf(address(this)).sub(initialInvestment.div(DAI_RESERVE_REMAINDER));
+        uint256 taxForClose = investments.mul(DAI_RESERVE_REMAINDER).sub(investments);
+        
+        require(mogulDAI.allowance(mogulBank, address(this)) >= taxForClose, "close:: Owner tries to close c-org with unapproved dai");
+        mogulDAI.transferFrom(mogulBank, address(this), taxForClose);
+        state = State.CLOSED;
     }
     
     function onTransfer(address from, address to, uint256 value) public {

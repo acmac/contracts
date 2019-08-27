@@ -177,10 +177,11 @@ describe('Mogul Organisation Contract', function () {
             });
 
             it('Should receive correct invest amount', async () => {
-                // EXPECTED_INVESTMENTS_AMOUNT = unlocking amount + investment amount
+                // EXPECTED_INVESTMENTS_AMOUNT = 80% of unlocking amount + investment amount
                 await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
-                const EXPECTED_INVESTMENTS_AMOUNT = UNLOCK_AMOUNT.add(INVESTMENT_AMOUNT); // 2 ETH
-                let totalDAIInvestments = await mogulOrganisationInstance.totalDAIInvestments();
+                const EXPECTED_INVESTMENTS_AMOUNT = (UNLOCK_AMOUNT.add(INVESTMENT_AMOUNT)).mul(80).div(100);
+                let totalDAIInvestments = await mogulDAIInstance.balanceOf(MOGUL_BANK);
+
                 assert(totalDAIInvestments.eq(EXPECTED_INVESTMENTS_AMOUNT), 'Incorrect investments amount after investment');
             });
 
@@ -479,6 +480,37 @@ describe('Mogul Organisation Contract', function () {
             it("Should revert if one tries to repay DAI that he doesn't have", async () => {
                 await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(DOUBLE_AMOUNT, DIVIDEND_RATIO));
             });
+        });
+
+        describe('Closin C-org', function () {
+
+            beforeEach(async () => {
+                const signedData = hashData(OWNER, INVESTOR.address);
+
+                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
+                    gasLimit: 2000000
+                });
+
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+
+                await contractInitializator.mintDAI(mogulDAIInstance, REPAYER.address, ONE_ETH);
+                await contractInitializator.approveDAI(mogulDAIInstance, REPAYER.address, mogulOrganisationInstance.contractAddress, ONE_ETH);
+            });
+
+            // it('Should lower COToken returned on investment after paying dividends', async () => {
+            //
+            //     await mogulDAIInstance.from(MOGUL_BANK).approve(mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
+            //     // let bankAmount = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
+            //
+            //     await mogulOrganisationInstance.close();
+            //
+            //     let bankAmount = await mogulDAIInstance.balanceOf(MOGUL_BANK);
+            //     console.log(bankAmount.toString());
+            //
+            //     res = await mogulOrganisationInstance.state();
+            //     console.log(res.toString());
+            //
+            // });
         })
     });
 });
