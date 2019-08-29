@@ -35,7 +35,6 @@ describe('Voting Contract', function () {
         ethers.utils.formatBytes32String('Ted')
     ];
 
-
     const MOVIE_SPONSORSHIP_RECEIVER = [
         SPONSORSHIP_RECEIVER_1.address,
         SPONSORSHIP_RECEIVER_2.address,
@@ -425,6 +424,72 @@ describe('Voting Contract', function () {
 
         it('Should revert if other than token contract tries to revoke vote', async () => {
             await assert.revert(votingContract.onTransfer(INVESTOR.address, OWNER.address, 0));
+        });
+
+    });
+
+    describe('Cancel Round', function () {
+
+        beforeEach(async () => {
+
+            mogulDAIInstance = await ContractInitializator.deployMglDai();
+            mogulOrganisationInstance = await ContractInitializator.deployMogulOrganization(mogulDAIInstance);
+            mogulTokenContract = await ContractInitializator.getMogulToken(mogulOrganisationInstance, OWNER);
+
+            await ContractInitializator.mintDAI(mogulDAIInstance, OWNER.address, UNLOCK_AMOUNT);
+            await ContractInitializator.approveDAI(mogulDAIInstance, OWNER, mogulOrganisationInstance.contractAddress, UNLOCK_AMOUNT);
+
+            await ContractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, INVESTMENT_AMOUNT);
+            await ContractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
+
+            await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
+                gasLimit: 2000000
+            });
+
+            await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+            await mogulOrganisationInstance.setWhitelisted(OWNER.address, true);
+
+            votingContract = await ContractInitializator.getVotingContract(mogulTokenContract.contractAddress, mogulDAIInstance.contractAddress);
+            await mogulTokenContract.addMovementNotifier(votingContract.contractAddress);
+
+            const blockInfo = await provider.getBlock();
+            startDate = blockInfo.timestamp + oneDay;
+            endDate = startDate + sevenDays;
+
+            await mogulDAIInstance.mint(OWNER.address, MILLION_DAI.mul('5'));
+            await mogulDAIInstance.approve(votingContract.contractAddress, MILLION_DAI.mul('5'));
+
+            await votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+                gasLimit: 2700000
+            });
+
+            await utils.setTimeTo(provider, startDate);
+
+            await votingContract.from(INVESTOR.address).vote(1);
+        });
+
+        it('Should cancel round and move to next one', async () => {
+            let currentRound = await votingContract.currentRound();
+
+            let roundMaxInvestment = await votingContract.getRoundInfo(0);
+
+            await votingContract.cancelRound();
+
+            let roundAfterCancel = await votingContract.currentRound();
+
+            let ownerBalance = await mogulDAIInstance.balanceOf(OWNER.address);
+
+            assert.strictEqual(roundMaxInvestment[3].toString, ownerBalance.toString);
+            assert(currentRound.add(1).eq(roundAfterCancel));
+        });
+
+        it('Should revert if one tries to cancel not started round', async () => {
+            await votingContract.cancelRound();
+            await assert.revert(votingContract.cancelRound());
+        });
+
+        it('Should revert if not owner tries to cancel round', async () => {
+            await assert.revert(votingContract.from(INVESTOR.address).cancelRound());
         });
 
     });

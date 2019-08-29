@@ -23,9 +23,6 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     
     uint256 constant public DAI_RESERVE_REMAINDER = 5; // 20%
     
-    enum State {LIVE, CLOSED}
-    State public state;
-    
     event Invest(address investor, uint256 amount);
     event Withdraw(address investor, uint256 amount);
     event UnlockOrganisation(address unlocker, uint256 initialAmount, uint256 initialMglSupply);
@@ -110,19 +107,8 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         premintedMGL = _initialMglSupply;
         
         mogulToken.mint(msg.sender, _initialMglSupply);
-    
-        state = State.LIVE;
-    
-        emit UnlockOrganisation(msg.sender, _unlockAmount, _initialMglSupply);
-    }
-    
-    function close() public onlyOwner {
-        uint256 investments = mogulDAI.balanceOf(address(this)).sub(initialInvestment.div(DAI_RESERVE_REMAINDER));
-        uint256 taxForClose = investments.mul(DAI_RESERVE_REMAINDER).sub(investments);
         
-        require(mogulDAI.allowance(mogulBank, address(this)) >= taxForClose, "close:: Owner tries to close c-org with unapproved dai");
-        mogulDAI.transferFrom(mogulBank, address(this), taxForClose);
-        state = State.CLOSED;
+        emit UnlockOrganisation(msg.sender, _unlockAmount, _initialMglSupply);
     }
     
     function onTransfer(address from, address to, uint256 value) public {

@@ -144,6 +144,7 @@ contract Voting is Ownable {
     }
     
     function cancelRound() public onlyOwner {
+        require(currentRound < rounds.length);
         
         daiTokenContract.transfer(owner(), rounds[currentRound].maxInvestment);
         
@@ -172,8 +173,8 @@ contract Voting is Ownable {
         }
     }
     
-    function getRoundInfo(uint256 _round) public view returns (uint256, uint256, uint8){
-        return (rounds[_round].startDate, rounds[_round].endDate, rounds[_round].proposalCount);
+    function getRoundInfo(uint256 _round) public view returns (uint256, uint256, uint8, uint256){
+        return (rounds[_round].startDate, rounds[_round].endDate, rounds[_round].proposalCount, rounds[_round].maxInvestment);
     }
     
     function getRounds() public view returns (uint256){

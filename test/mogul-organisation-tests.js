@@ -481,36 +481,5 @@ describe('Mogul Organisation Contract', function () {
                 await assert.revert(mogulOrganisationInstance.from(REPAYER).payDividends(DOUBLE_AMOUNT, DIVIDEND_RATIO));
             });
         });
-
-        describe('Closin C-org', function () {
-
-            beforeEach(async () => {
-                const signedData = hashData(OWNER, INVESTOR.address);
-
-                await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
-                    gasLimit: 2000000
-                });
-
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
-
-                await contractInitializator.mintDAI(mogulDAIInstance, REPAYER.address, ONE_ETH);
-                await contractInitializator.approveDAI(mogulDAIInstance, REPAYER.address, mogulOrganisationInstance.contractAddress, ONE_ETH);
-            });
-
-            // it('Should lower COToken returned on investment after paying dividends', async () => {
-            //
-            //     await mogulDAIInstance.from(MOGUL_BANK).approve(mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
-            //     // let bankAmount = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
-            //
-            //     await mogulOrganisationInstance.close();
-            //
-            //     let bankAmount = await mogulDAIInstance.balanceOf(MOGUL_BANK);
-            //     console.log(bankAmount.toString());
-            //
-            //     res = await mogulOrganisationInstance.state();
-            //     console.log(res.toString());
-            //
-            // });
-        })
     });
 });
