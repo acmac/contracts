@@ -64,7 +64,9 @@ const deploy = async (network, secret) => {
     await mogulTokenDeployed.renounceMinter();
     await mogulTokenDeployed.addMovementNotifier(mogulOrganization.contractAddress);
 
-    await deployVoting(mogulTokenDeployed.contractAddress, daiContract.address, deployer);
+    const votingContract = await deployVoting(mogulTokenDeployed.contractAddress, daiContract.address, deployer);
+
+    await mogulTokenDeployed.addMovementNotifier(votingContract.contractAddress);
 
     await daiContract.approve(mogulOrganization.contractAddress, UNLOCK_AMOUNT, {
         gasLimit: 4700000

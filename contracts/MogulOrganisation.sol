@@ -17,6 +17,8 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     MogulToken public mogulToken;
 
     address public mogulBank;
+    
+    uint256 public totalDAIInvestments = 0;
 
     uint256 public initialInvestment = 0;
     uint256 public premintedMGL = 0;
@@ -58,6 +60,8 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         mogulDAI.transferFrom(msg.sender, mogulBank, _daiAmount.sub(reserveDAIAmount));
 
         mogulToken.mint(msg.sender, mglTokensToMint);
+    
+        totalDAIInvestments = totalDAIInvestments.add(_daiAmount);
         
         emit Invest(msg.sender, _daiAmount);
     }
@@ -70,6 +74,8 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         mogulDAI.transfer(msg.sender, daiToReturn);
         
         mogulToken.burnFrom(msg.sender, _amountMGL);
+    
+        totalDAIInvestments = totalDAIInvestments.sub(daiToReturn);
 
         emit Withdraw(msg.sender, daiToReturn);
     }
@@ -107,6 +113,8 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         premintedMGL = _initialMglSupply;
         
         mogulToken.mint(msg.sender, _initialMglSupply);
+    
+        totalDAIInvestments = _unlockAmount;
         
         emit UnlockOrganisation(msg.sender, _unlockAmount, _initialMglSupply);
     }
