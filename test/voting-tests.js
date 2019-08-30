@@ -28,19 +28,11 @@ describe('Voting Contract', function () {
     const today = new Date();
 
     const MOVIE_NAMES = [
-        '0x4d6f766965310000000000000000000000000000000000000000000000000000',
-        '0x4d6f766965320000000000000000000000000000000000000000000000000000',
-        '0x4d6f766965330000000000000000000000000000000000000000000000000000',
-        '0x4d6f766965340000000000000000000000000000000000000000000000000000',
-        '0x4d6f766965350000000000000000000000000000000000000000000000000000'
-    ];
-
-    const MOVIE_DESCRIPTION = [
-        '0x4d6f766965310000000000000000000000000000000000000000000000000000',
-        '0x4d6f766965320000000000000000000000000000000000000000000000000000',
-        '0x4d6f766965330000000000000000000000000000000000000000000000000000',
-        '0x4d6f766965340000000000000000000000000000000000000000000000000000',
-        '0x4d6f766965350000000000000000000000000000000000000000000000000000'
+        ethers.utils.formatBytes32String('Godzilla king of the monsters'),
+        ethers.utils.formatBytes32String('History of the world'),
+        ethers.utils.formatBytes32String('Die hard'),
+        ethers.utils.formatBytes32String('Bruce almighty'),
+        ethers.utils.formatBytes32String('Ted')
     ];
 
     const MOVIE_SPONSORSHIP_RECEIVER = [
@@ -118,7 +110,7 @@ describe('Voting Contract', function () {
         });
 
         it('Should make a proposal correctly', async () => {
-            await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate,{
+            await votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate,{
                 gasLimit: 2700000
             });
 
@@ -134,31 +126,30 @@ describe('Voting Contract', function () {
             for (let i = 0; i < roundInfo[2]; i++) {
                 let proposalInfo = await votingContract.getProposalInfo(0, i);
                 assert.strictEqual(proposalInfo[0], MOVIE_NAMES[i]);
-                assert.strictEqual(proposalInfo[1], MOVIE_DESCRIPTION[i]);
-                assert.strictEqual(proposalInfo[3], MOVIE_SPONSORSHIP_RECEIVER[i]);
-                assert(proposalInfo[4].eq(MOVIE_REQUESTED_AMOUNT[i]));
+                assert.strictEqual(proposalInfo[2], MOVIE_SPONSORSHIP_RECEIVER[i]);
+                assert(proposalInfo[3].eq(MOVIE_REQUESTED_AMOUNT[i]));
             }
         });
 
         it('Should revert if start date is after end date', async () => {
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, endDate, startDate, {
+            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, endDate, startDate, {
                 gasLimit: 2700000
             }));
         });
 
         it('Should revert if start date is in the past', async () => {
             let dateInPast = endDate = Math.floor(today.setDate(today.getDate() - 30) / 1000);
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, dateInPast, endDate, {
+            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, dateInPast, endDate, {
                 gasLimit: 2700000
             }));
         });
 
         it('Should revert if start date is before last voting date', async () => {
-            await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             });
             let dateDuringVotingPeriod = endDate = Math.floor(today.setDate(today.getDate() + 15) / 1000);
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, dateDuringVotingPeriod, endDate, {
+            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, dateDuringVotingPeriod, endDate, {
                 gasLimit: 2700000
             }));
         });
@@ -171,20 +162,7 @@ describe('Voting Contract', function () {
                 '0x4d6f766965340000000000000000000000000000000000000000000000000000',
                 '0x4d6f766965350000000000000000000000000000000000000000000000000000'
             ];
-            await assert.revert(votingContract.createProposal(LESS_MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
-                gasLimit: 2700000
-            }));
-        });
-
-        it('Should revert if movie descriptions are less or more than other properties', async () => {
-
-            const LESS_MOVIE_DESCRIPTION = [
-                '0x4d6f766965320000000000000000000000000000000000000000000000000000',
-                '0x4d6f766965330000000000000000000000000000000000000000000000000000',
-                '0x4d6f766965340000000000000000000000000000000000000000000000000000',
-                '0x4d6f766965350000000000000000000000000000000000000000000000000000'
-            ];
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, LESS_MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await assert.revert(votingContract.createProposal(LESS_MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             }));
         });
@@ -200,7 +178,7 @@ describe('Voting Contract', function () {
                 accounts[6].signer.address,
             ];
 
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MORE_MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MORE_MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             }));
         });
@@ -215,7 +193,7 @@ describe('Voting Contract', function () {
                 MILLION_DAI.mul('5'),
                 MILLION_DAI.mul('6')
             ];
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MORE_MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MORE_MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             }));
         });
@@ -252,7 +230,7 @@ describe('Voting Contract', function () {
             await mogulDAIInstance.mint(OWNER.address, MILLION_DAI.mul('5'));
             await mogulDAIInstance.approve(votingContract.contractAddress, MILLION_DAI.mul('5'));
 
-            await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             });
 
@@ -275,7 +253,7 @@ describe('Voting Contract', function () {
             let investorMogulTokens = await mogulTokenContract.balanceOf(INVESTOR.address);
             let expectedRating = calculationHelper.sqrtTokens(investorMogulTokens.mul(10));
 
-            assert.strictEqual(proposalInfo[2].toString().substring(0, 10), expectedRating.toString());
+            assert.strictEqual(proposalInfo[1].toString().substring(0, 10), expectedRating.toString());
             assert.strictEqual(voterVoteInfo.toString().substring(0, 10), expectedRating.toString());
         });
 
@@ -303,7 +281,7 @@ describe('Voting Contract', function () {
             let investorMogulTokens = await mogulTokenContract.balanceOf(INVESTOR.address);
             let expectedRating = calculationHelper.sqrtTokens(investorMogulTokens.mul(10));
 
-            assert.strictEqual(proposalInfo[2].toString().substring(0, 10), expectedRating.toString());
+            assert.strictEqual(proposalInfo[1].toString().substring(0, 10), expectedRating.toString());
         });
 
         it('Should revert if one tries to change his vote', async () => {
@@ -351,7 +329,7 @@ describe('Voting Contract', function () {
             await mogulDAIInstance.mint(OWNER.address, MILLION_DAI.mul('5'));
             await mogulDAIInstance.approve(votingContract.contractAddress, MILLION_DAI.mul('5'));
 
-            await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             });
 
@@ -421,7 +399,7 @@ describe('Voting Contract', function () {
             await mogulDAIInstance.mint(OWNER.address, MILLION_DAI.mul('5'));
             await mogulDAIInstance.approve(votingContract.contractAddress, MILLION_DAI.mul('5'));
 
-            await votingContract.createProposal(MOVIE_NAMES, MOVIE_DESCRIPTION, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             });
 
@@ -440,12 +418,78 @@ describe('Voting Contract', function () {
             assert(votes.eq(0));
             assert.strictEqual(voteInfo, 0);
             // roundInfo[2] => proposal total votes
-            assert(roundInfo[2].eq(0));
+            assert(roundInfo[1].eq(0));
 
         });
 
         it('Should revert if other than token contract tries to revoke vote', async () => {
             await assert.revert(votingContract.onTransfer(INVESTOR.address, OWNER.address, 0));
+        });
+
+    });
+
+    describe('Cancel Round', function () {
+
+        beforeEach(async () => {
+
+            mogulDAIInstance = await ContractInitializator.deployMglDai();
+            mogulOrganisationInstance = await ContractInitializator.deployMogulOrganization(mogulDAIInstance);
+            mogulTokenContract = await ContractInitializator.getMogulToken(mogulOrganisationInstance, OWNER);
+
+            await ContractInitializator.mintDAI(mogulDAIInstance, OWNER.address, UNLOCK_AMOUNT);
+            await ContractInitializator.approveDAI(mogulDAIInstance, OWNER, mogulOrganisationInstance.contractAddress, UNLOCK_AMOUNT);
+
+            await ContractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, INVESTMENT_AMOUNT);
+            await ContractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
+
+            await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
+                gasLimit: 2000000
+            });
+
+            await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+            await mogulOrganisationInstance.setWhitelisted(OWNER.address, true);
+
+            votingContract = await ContractInitializator.getVotingContract(mogulTokenContract.contractAddress, mogulDAIInstance.contractAddress);
+            await mogulTokenContract.addMovementNotifier(votingContract.contractAddress);
+
+            const blockInfo = await provider.getBlock();
+            startDate = blockInfo.timestamp + oneDay;
+            endDate = startDate + sevenDays;
+
+            await mogulDAIInstance.mint(OWNER.address, MILLION_DAI.mul('5'));
+            await mogulDAIInstance.approve(votingContract.contractAddress, MILLION_DAI.mul('5'));
+
+            await votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+                gasLimit: 2700000
+            });
+
+            await utils.setTimeTo(provider, startDate);
+
+            await votingContract.from(INVESTOR.address).vote(1);
+        });
+
+        it('Should cancel round and move to next one', async () => {
+            let currentRound = await votingContract.currentRound();
+
+            let roundMaxInvestment = await votingContract.getRoundInfo(0);
+
+            await votingContract.cancelRound();
+
+            let roundAfterCancel = await votingContract.currentRound();
+
+            let ownerBalance = await mogulDAIInstance.balanceOf(OWNER.address);
+
+            assert.strictEqual(roundMaxInvestment[3].toString, ownerBalance.toString);
+            assert(currentRound.add(1).eq(roundAfterCancel));
+        });
+
+        it('Should revert if one tries to cancel not started round', async () => {
+            await votingContract.cancelRound();
+            await assert.revert(votingContract.cancelRound());
+        });
+
+        it('Should revert if not owner tries to cancel round', async () => {
+            await assert.revert(votingContract.from(INVESTOR.address).cancelRound());
         });
 
     });
