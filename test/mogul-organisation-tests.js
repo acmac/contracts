@@ -103,7 +103,7 @@ describe('Mogul Organisation Contract', function () {
 
         });
 
-        describe.only('Unlocking and Initialization', function () {
+        describe('Unlocking and Initialization', function () {
 
             it('Should unlock the organisation', async () => {
                 let expectedBalance = UNLOCK_AMOUNT.div(5); // 20%
