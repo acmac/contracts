@@ -23,6 +23,8 @@ describe('Mogul Organisation Contract', function () {
 
     const INITIAL_MOGUL_SUPPLY = ONE_ETH.mul(5000000);
 
+    const MAX_GAS_PRICE = 30;
+
     let mogulDAIInstance;
     let mogulTokenInstance;
 
@@ -101,7 +103,7 @@ describe('Mogul Organisation Contract', function () {
 
         });
 
-        describe('Unlocking', function () {
+        describe.only('Unlocking and Initialization', function () {
 
             it('Should unlock the organisation', async () => {
                 let expectedBalance = UNLOCK_AMOUNT.div(5); // 20%
@@ -136,7 +138,39 @@ describe('Mogul Organisation Contract', function () {
             it('Should throw if one tries to invest in non-unlocked organisation', async () => {
                 const signedData = hashData(OWNER, INVESTOR.address);
 
-                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(ONE_ETH, signedData), 'An investment has been processed for a non-unlocked organisation');
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(ONE_ETH, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                }), 'An investment has been processed for a non-unlocked organisation');
+            });
+
+            it('Should set mogul organisation admin correctly', async () => {
+                const adminAddress = await mogulOrganisationInstance.mogulOrgAdmin();
+                assert.strictEqual(adminAddress, OWNER.address, "mogul admin is not set correctly");
+            });
+
+            it('Should change mogul organisation max gas price', async () => {
+                const NEW_PRICE = 60;
+                await mogulOrganisationInstance.setMaxGasPrice(NEW_PRICE);
+
+                let newPrice = await mogulOrganisationInstance.maxGasPrice();
+
+                assert.strictEqual(newPrice, NEW_PRICE, "gas rice was not changed correctly");
+            });
+
+            it('Should change mogul organisation admin', async () => {
+                await mogulOrganisationInstance.setMogulOrgAdminAddress(INVESTOR.address);
+                const newAdminAddress = await mogulOrganisationInstance.mogulOrgAdmin();
+
+                assert.strictEqual(newAdminAddress, INVESTOR.address, "mogul admin is not changed correctly");
+            });
+
+            it('Should revert if not admin tries to change max gas price', async () => {
+                const NEW_PRICE = 60;
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).setMaxGasPrice(NEW_PRICE));
+            });
+
+            it('Should revert if not admin tries to change mogul organisation admin', async () => {
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).setMogulOrgAdminAddress(INVESTOR.address));
             });
         });
 
@@ -158,14 +192,18 @@ describe('Mogul Organisation Contract', function () {
             });
 
             it('should send correct dai amount to the mogul bank', async () => {
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
                 const EXPECTED_BANK_BALANCE = UNLOCK_AMOUNT.add(INVESTMENT_AMOUNT).div(5).mul(4); // 80%
                 let bankBalance = await mogulDAIInstance.balanceOf(MOGUL_BANK);
                 assert(bankBalance.eq(EXPECTED_BANK_BALANCE), 'Incorrect bank balance after investment');
             });
 
             it('should send correct dai amount to the reserve', async () => {
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
                 const EXPECTED_RESERVE_BALANCE = UNLOCK_AMOUNT.add(INVESTMENT_AMOUNT).div(5); // 0.4 ETH (Unlocking + investment)
                 let reserveBalance = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
                 assert(reserveBalance.eq(EXPECTED_RESERVE_BALANCE), 'Incorrect reserve balance after investment');
@@ -173,7 +211,9 @@ describe('Mogul Organisation Contract', function () {
 
             it('should send correct amount mogul tokens to the investor', async () => {
                 // normalization is because of 18 decimals of mogul token
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
                 const EXPECTED_INVESTOR_MOGUL_BALANCE = (buyCalc(INITIAL_MOGUL_SUPPLY, INITIAL_MOGUL_SUPPLY, INVESTMENT_AMOUNT) / normalization).toFixed(9);
                 let investorMogulBalance = await mogulTokenInstance.balanceOf(INVESTOR.address);
                 investorMogulBalance = (Number(investorMogulBalance.toString()) / normalization).toFixed(9);
@@ -183,7 +223,9 @@ describe('Mogul Organisation Contract', function () {
 
             it('Should receive correct invest amount', async () => {
                 // EXPECTED_INVESTMENTS_AMOUNT = 80% of unlocking amount + investment amount
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
                 const EXPECTED_INVESTMENTS_AMOUNT = (UNLOCK_AMOUNT.add(INVESTMENT_AMOUNT)).mul(80).div(100);
                 let totalDAIInvestments = await mogulDAIInstance.balanceOf(MOGUL_BANK);
 
@@ -191,12 +233,16 @@ describe('Mogul Organisation Contract', function () {
             });
 
             it('Should throw if an investor tries to invest with unapproved DAI amount', async () => {
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
                 let investorWithoutDAI = accounts[3].signer;
 
                 const signedData2 = hashData(OWNER, investorWithoutDAI.address);
 
-                await assert.revert(mogulOrganisationInstance.from(investorWithoutDAI).invest(ONE_ETH, signedData2), 'An investment has been processed with unapproved DAI amount');
+                await assert.revert(mogulOrganisationInstance.from(investorWithoutDAI).invest(ONE_ETH, signedData2, {
+                    gasPrice: MAX_GAS_PRICE
+                }), 'An investment has been processed with unapproved DAI amount');
             });
 
         });
@@ -224,7 +270,9 @@ describe('Mogul Organisation Contract', function () {
 
                 const signedData = hashData(newWhiteLister, INVESTOR.address);
 
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
 
                 const isWhitelisted = await mogulOrganisationInstance.whiteList(INVESTOR.address);
                 assert.ok(isWhitelisted);
@@ -237,7 +285,9 @@ describe('Mogul Organisation Contract', function () {
 
                 const signedData = hashData(OWNER, INVESTOR.address);
 
-                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData));
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                }));
 
             });
 
@@ -249,7 +299,9 @@ describe('Mogul Organisation Contract', function () {
             it('Should let investor to invest and save him as whitelisted if approved from owner / whitelister', async () => {
                 const signedData = hashData(OWNER, INVESTOR.address);
 
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
 
                 const isWhitelisted = await mogulOrganisationInstance.whiteList(INVESTOR.address);
                 assert.ok(isWhitelisted);
@@ -258,7 +310,9 @@ describe('Mogul Organisation Contract', function () {
             it('Should let whitelisted investor to invest', async () => {
                 const signedData = hashData(OWNER, INVESTOR.address);
 
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
 
                 const isWhitelisted = await mogulOrganisationInstance.whiteList(INVESTOR.address);
                 assert.ok(isWhitelisted);
@@ -266,7 +320,9 @@ describe('Mogul Organisation Contract', function () {
                 await contractInitializator.mintDAI(mogulDAIInstance, INVESTOR.address, INVESTMENT_AMOUNT);
                 await contractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
 
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, ethers.constants.AddressZero);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, ethers.constants.AddressZero, {
+                    gasPrice: MAX_GAS_PRICE
+                });
             });
 
             it('Should let whitelister to manual whitelist user', async () => {
@@ -280,7 +336,9 @@ describe('Mogul Organisation Contract', function () {
             it('Should let whitelister to remove whitelist user', async () => {
                 const signedData = hashData(OWNER, INVESTOR.address);
 
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
                 await mogulOrganisationInstance.from(OWNER).setWhitelisted(INVESTOR.address, false);
 
                 const isWhitelisted = await mogulOrganisationInstance.whiteList(INVESTOR.address);
@@ -289,7 +347,9 @@ describe('Mogul Organisation Contract', function () {
 
             it('Should let one to transfer MGL tokens to whitelisted user', async () => {
                 const signedData = hashData(OWNER, INVESTOR.address);
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
 
                 await mogulTokenInstance.approve(INVESTOR.address, ONE_ETH);
                 await mogulTokenInstance.transfer(INVESTOR.address, ONE_ETH);
@@ -297,7 +357,9 @@ describe('Mogul Organisation Contract', function () {
 
             it('Should revert if one tries to transfer MGL tokens to non whitelisted useer', async () => {
                 const signedData = hashData(OWNER, INVESTOR.address);
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
 
                 await mogulTokenInstance.approve(INVESTOR.address, ONE_ETH);
                 await mogulOrganisationInstance.from(OWNER).setWhitelisted(INVESTOR.address, false);
@@ -311,13 +373,17 @@ describe('Mogul Organisation Contract', function () {
             it('Should revert if not whitelisted investor try to invest', async () => {
                 const emptySignedData = "0x";
 
-                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, emptySignedData));
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, emptySignedData, {
+                    gasPrice: MAX_GAS_PRICE
+                }));
             });
 
             it('Should revert if one try to invest with incorrect signature', async () => {
                 const signedData = hashData(INVESTOR, INVESTOR.address);
 
-                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData));
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                }));
             });
 
         });
@@ -331,7 +397,9 @@ describe('Mogul Organisation Contract', function () {
                 await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
                     gasLimit: 2000000
                 });
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
             });
 
             it('Should sell MGL Tokens for ~ 80% less of their buying price', async () => {
@@ -344,6 +412,7 @@ describe('Mogul Organisation Contract', function () {
 
                 await mogulTokenInstance.approve(mogulOrganisationInstance.contractAddress, mglTokens);
                 await mogulOrganisationInstance.from(INVESTOR).revokeInvestment(mglTokens, {
+                    gasPrice: MAX_GAS_PRICE,
                     gasLimit: 250000
                 });
 
@@ -365,10 +434,13 @@ describe('Mogul Organisation Contract', function () {
 
                 const signedData = hashData(OWNER, OWNER.address);
 
-                await mogulOrganisationInstance.from(OWNER).invest(randomInvestment, signedData);
+                await mogulOrganisationInstance.from(OWNER).invest(randomInvestment, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
 
                 await mogulTokenInstance.approve(mogulOrganisationInstance.contractAddress, mglTokens);
                 await mogulOrganisationInstance.from(INVESTOR).revokeInvestment(mglTokens, {
+                    gasPrice: MAX_GAS_PRICE,
                     gasLimit: 250000
                 });
 
@@ -381,13 +453,19 @@ describe('Mogul Organisation Contract', function () {
 
             it('Should revert if one tries to sell unapproved tokens', async () => {
                 let tokens = "414213562299999999";
-                await assert.revert(mogulOrganisationInstance.from(INVESTOR).revokeInvestment(tokens));
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).revokeInvestment(tokens, {
+                    gasPrice: MAX_GAS_PRICE,
+                    gasLimit: 250000
+                }));
 
             });
 
             it("Should revert if one tries to sell tokens that he doesn't have", async () => {
                 let tokens = "414213562299999999";
-                await assert.revert(mogulOrganisationInstance.from(OWNER).revokeInvestment(tokens));
+                await assert.revert(mogulOrganisationInstance.from(OWNER).revokeInvestment(tokens, {
+                    gasPrice: MAX_GAS_PRICE,
+                    gasLimit: 250000
+                }));
             });
         });
 
@@ -399,7 +477,9 @@ describe('Mogul Organisation Contract', function () {
                 await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
                     gasLimit: 2000000
                 });
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
 
                 await contractInitializator.mintDAI(mogulDAIInstance, REPAYER.address, ONE_ETH);
                 await contractInitializator.approveDAI(mogulDAIInstance, REPAYER.address, mogulOrganisationInstance.contractAddress, ONE_ETH);
@@ -495,7 +575,9 @@ describe('Mogul Organisation Contract', function () {
                 await mogulOrganisationInstance.unlockOrganisation(UNLOCK_AMOUNT, INITIAL_MOGUL_SUPPLY, {
                     gasLimit: 2000000
                 });
-                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+                await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                });
 
             });
 
@@ -553,7 +635,9 @@ describe('Mogul Organisation Contract', function () {
 
                 await mogulOrganisationInstance.closeOrganisation();
 
-                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData));
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                }));
             });
 
             it('Should revert if one tries to invest after closing the c-org', async () => {
@@ -571,7 +655,9 @@ describe('Mogul Organisation Contract', function () {
 
                 await mogulOrganisationInstance.closeOrganisation();
 
-                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData));
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                    gasPrice: MAX_GAS_PRICE
+                }));
             });
 
             it('Should revert if one tries to pay dividends after closing the c-org', async () => {
@@ -622,6 +708,7 @@ describe('Mogul Organisation Contract', function () {
 
                 await mogulTokenInstance.from(INVESTOR.address).approve(mogulOrganisationInstance.contractAddress, mglTokens);
                 await mogulOrganisationInstance.from(INVESTOR).revokeInvestment(mglTokens, {
+                    gasPrice: MAX_GAS_PRICE,
                     gasLimit: 250000
                 });
 
@@ -631,6 +718,7 @@ describe('Mogul Organisation Contract', function () {
                 await mogulTokenInstance.approve(mogulOrganisationInstance.contractAddress, ownerMGL);
 
                 await mogulOrganisationInstance.revokeInvestment(ownerMGL, {
+                    gasPrice: MAX_GAS_PRICE,
                     gasLimit: 250000
                 });
 

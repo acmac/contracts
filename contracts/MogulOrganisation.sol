@@ -17,12 +17,15 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     MogulToken public mogulToken;
 
     address public mogulBank;
+    address public mogulOrgAdmin;
     
     uint256 public totalDAIInvestments = 0;
 
     uint256 public premintedMGL = 0;
     
     uint256 constant public DAI_RESERVE_REMAINDER = 5; // 20%
+    
+    uint16 public maxGasPrice = 30;
     
     enum State {
         LOCKED,
@@ -33,7 +36,12 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     State public mogulOrgState;
     
     modifier onlyWhenLive() {
-        require(mogulOrgState == State.LIVE);
+        require(mogulOrgState == State.LIVE, "onlyWhenLive :: The Organisation iis not live");
+        _;
+    }
+    
+    modifier onlyAdmin() {
+        require(msg.sender == mogulOrgAdmin, "onlyAdmin :: msg sender is not the admin");
         _;
     }
     
@@ -53,11 +61,22 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         mogulDAI = MogulDAI(_mogulDAI);
 
         mogulBank = _mogulBank;
+        mogulOrgAdmin = msg.sender;
         bondingMath = BondingMathematics(_bondingMath);
-        
+    }
+    
+    function setMaxGasPrice(uint16 _maxGasPrice) public onlyAdmin {
+        require(_maxGasPrice > 0, "setMaxGasPrice :: gas price can not be zero");
+        maxGasPrice = _maxGasPrice;
+    }
+    
+    function setMogulOrgAdminAddress(address _newMogulOrgAdmin) public onlyAdmin {
+        require(_newMogulOrgAdmin != address(0), "mogulOrgAdminAddress :: invalid address");
+        mogulOrgAdmin = _newMogulOrgAdmin;
     }
     
     function invest(uint256 _daiAmount, bytes memory signedData) public onlyWhenLive {
+        require(tx.gasprice == maxGasPrice);
         require(mogulOrgState == State.LIVE);
         require(mogulDAI.balanceOf(address(this)) > 0, "invest:: Organisation is not unlocked for investments yet");
         require(mogulDAI.allowance(msg.sender, address(this)) >= _daiAmount, "invest:: Investor tries to invest with unapproved DAI amount");
@@ -81,6 +100,7 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     }
     
     function revokeInvestment(uint256 _amountMGL) public {
+        require(tx.gasprice == maxGasPrice);
         if (mogulOrgState == State.LIVE) {
             require(mogulToken.allowance(msg.sender, address(this)) >= _amountMGL, "revokeInvestment:: Investor wants to withdraw MGL without allowance");
     
