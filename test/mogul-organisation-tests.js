@@ -116,7 +116,7 @@ describe('Mogul Organisation Contract', function () {
                 let unlockedState = 1;
                 let state = await mogulOrganisationInstance.mogulOrgState();
 
-                assert.strictEqual(unlockedState, state, "the state is not unlocked")
+                assert.strictEqual(unlockedState, state, "the state is not unlocked");
                 assert(ownerMglBalance.eq(INITIAL_MOGUL_SUPPLY), 'Owner balance is incorrect after unlocking');
                 assert(organisationBalance.eq(expectedBalance), 'Organisation balance is incorrect after unlocking');
             });

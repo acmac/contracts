@@ -9,6 +9,8 @@ const DAIExchange = require('./../build/DAIExchange');
 const BondingMath = require('./../build/BondingMathematics');
 const MogulOrganization = require('./../build/MogulOrganisation');
 
+const MultisigWallet = require('./../build/MultiSigWallet');
+
 const BondingSQRT = require('./../build/SQRT');
 const TokensSQRT = require('./../build/TokensSQRT');
 
@@ -158,6 +160,20 @@ let deployVoting = async function (mogulTokenAddress, daiTokenAddress, deployer)
 
     // Deploy Voting
     return await deployer.deploy(Voting, {}, mogulTokenAddress, daiTokenAddress, tokenSqrtContractAddress);
+};
+
+
+let deployMultisigWallet = async function(owners, requiredConfirmations) {
+
+    const multiSigWalletDeployed = await deployer.deploy(MogulToken, {}, owners, requiredConfirmations);
+    return multiSigWalletDeployed;
+};
+
+let transferOwnership = async function (multiSigWallet, mogulOrganisation, votingContract) {
+
+    await mogulOrganisation.transferOwnership(multiSigWallet.contractAddress);
+    await votingContract.transferOwnership(multiSigWallet.contractAddress);
+
 };
 
 module.exports = { deploy };
