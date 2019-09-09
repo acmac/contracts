@@ -56,6 +56,8 @@ describe('Voting Contract', function () {
     const UNLOCK_AMOUNT = ONE_ETH.mul(2500000);
     const INITIAL_MOGUL_SUPPLY = ONE_ETH.mul(5000000);
 
+    const MAX_GAS_PRICE = 30;
+
     let votingContract;
 
     let mogulDAIInstance;
@@ -219,7 +221,10 @@ describe('Voting Contract', function () {
                 gasLimit: 2000000
             });
 
-            await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+            await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                gasPrice: MAX_GAS_PRICE,
+                gasLimit: 2700000
+            });
 
             votingContract = await ContractInitializator.getVotingContract(mogulTokenContract.contractAddress, mogulDAIInstance.contractAddress);
 
@@ -265,6 +270,7 @@ describe('Voting Contract', function () {
             await ContractInitializator.approveDAI(mogulDAIInstance, INVESTOR, mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
 
             await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                gasPrice: MAX_GAS_PRICE,
                 gasLimit: 2700000
             });
 
@@ -318,7 +324,10 @@ describe('Voting Contract', function () {
                 gasLimit: 2000000
             });
 
-            await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+            await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                gasPrice: MAX_GAS_PRICE,
+                gasLimit: 2700000
+            });
 
             votingContract = await ContractInitializator.getVotingContract(mogulTokenContract.contractAddress, mogulDAIInstance.contractAddress);
 
@@ -386,7 +395,10 @@ describe('Voting Contract', function () {
                 gasLimit: 2000000
             });
 
-            await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+            await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                gasPrice: MAX_GAS_PRICE,
+                gasLimit: 2700000
+            });
             await mogulOrganisationInstance.setWhitelisted(OWNER.address, true);
 
             votingContract = await ContractInitializator.getVotingContract(mogulTokenContract.contractAddress, mogulDAIInstance.contractAddress);
@@ -446,7 +458,10 @@ describe('Voting Contract', function () {
                 gasLimit: 2000000
             });
 
-            await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData);
+            await mogulOrganisationInstance.from(INVESTOR).invest(INVESTMENT_AMOUNT, signedData, {
+                gasPrice: MAX_GAS_PRICE,
+                gasLimit: 2700000
+            });
             await mogulOrganisationInstance.setWhitelisted(OWNER.address, true);
 
             votingContract = await ContractInitializator.getVotingContract(mogulTokenContract.contractAddress, mogulDAIInstance.contractAddress);
