@@ -15,7 +15,6 @@ def sqrt_high_precision(num: decimal) -> uint256:
 @public
 @constant
 def calc_purchase(tokenSupply: uint256, preMintedAmount: uint256, amount: uint256) -> uint256:
-    # 
 
     normalization: uint256 = 100000000
 
@@ -45,3 +44,21 @@ def calc_sell(tokenSupply: uint256, totalSupply: uint256, tokenAmount: uint256) 
     a: decimal = 1.0 - tokenAmountAsDecimal / tokenSupplyAsDecimal
     b: decimal = 1.0 - (a * a)
     return convert(totalSupplyAsDecimal * b, uint256)
+
+@public
+@constant
+def calc_exit_fee(continuousTokenSupply: uint256, premintedMGL: uint256, reserveTokenSupply: uint256) -> uint256:
+    # (totalMGLSupply^2 / preMintedMGLAmount) / 2 - buyback_reserve
+
+    normalization: uint256 = 100000000
+
+    continuousTokenSupplyTruncated: uint256 = continuousTokenSupply / normalization
+    premintedMGLTruncated: uint256 = premintedMGL / normalization
+    reserveTokenSupplyTruncated: uint256 = reserveTokenSupply / normalization
+
+    a: uint256 = continuousTokenSupplyTruncated * continuousTokenSupplyTruncated
+    b: uint256 = a / premintedMGLTruncated
+    c: uint256 = b / 2
+    res: uint256 = c - reserveTokenSupplyTruncated
+
+    return res * normalization

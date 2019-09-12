@@ -567,6 +567,7 @@ describe('Mogul Organisation Contract', function () {
             });
         });
 
+        // taxPenalty = ((totalMGLSupply^2 / preMintedMGLAmount)/2) - buyback_reserve
         describe('Closing Mogul c-org', function () {
 
             beforeEach(async () => {
@@ -579,12 +580,14 @@ describe('Mogul Organisation Contract', function () {
                     gasPrice: MAX_GAS_PRICE
                 });
 
+
             });
 
             it('Should close Mogul c-org', async () => {
-                const totalDaiInvested = await mogulOrganisationInstance.totalDAIInvestments();
+                const totalMglSupply = await mogulTokenInstance.totalSupply();
                 const daiReserve = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
-                const taxPenalty = totalDaiInvested.sub(daiReserve).div(2);
+
+                const taxPenalty = totalMglSupply.mul(totalMglSupply).div(INITIAL_MOGUL_SUPPLY).div(2).sub(daiReserve);
 
                 await mogulDAIInstance.mint(OWNER.address, taxPenalty);
                 await mogulDAIInstance.approve(mogulOrganisationInstance.contractAddress, taxPenalty);
@@ -597,10 +600,10 @@ describe('Mogul Organisation Contract', function () {
             });
 
             it('Should revert if not owner tries to close', async () => {
-                const totalDaiInvested = await mogulOrganisationInstance.totalDAIInvestments();
+                const totalMglSupply = await mogulTokenInstance.totalSupply();
                 const daiReserve = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
 
-                const taxPenalty = totalDaiInvested.sub(daiReserve).div(2);
+                const taxPenalty = totalMglSupply.mul(totalMglSupply).div(INITIAL_MOGUL_SUPPLY).div(2).sub(daiReserve);
 
                 await mogulDAIInstance.mint(OWNER.address, taxPenalty);
                 await mogulDAIInstance.approve(mogulOrganisationInstance.contractAddress, taxPenalty);
@@ -609,10 +612,10 @@ describe('Mogul Organisation Contract', function () {
             });
 
             it('Should revert if one tries to close with less DAI', async () => {
-                const totalDaiInvested = await mogulOrganisationInstance.totalDAIInvestments();
+                const totalMglSupply = await mogulTokenInstance.totalSupply();
                 const daiReserve = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
 
-                const lessTaxPenalty = totalDaiInvested.sub(daiReserve).div(2).sub(10);
+                const lessTaxPenalty = totalMglSupply.mul(totalMglSupply).div(INITIAL_MOGUL_SUPPLY).div(2).sub(daiReserve).div(2);
 
                 await mogulDAIInstance.mint(OWNER.address, lessTaxPenalty);
                 await mogulDAIInstance.approve(mogulOrganisationInstance.contractAddress, lessTaxPenalty);
@@ -625,13 +628,13 @@ describe('Mogul Organisation Contract', function () {
                 await mogulDAIInstance.mint(INVESTOR.address, INVESTMENT_AMOUNT);
                 await mogulDAIInstance.from(INVESTOR).approve(mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
 
-                const totalDaiInvested = await mogulOrganisationInstance.totalDAIInvestments();
+                const totalMglSupply = await mogulTokenInstance.totalSupply();
                 const daiReserve = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
 
-                const TaxPenalty = totalDaiInvested.sub(daiReserve).div(2);
+                const taxPenalty = totalMglSupply.mul(totalMglSupply).div(INITIAL_MOGUL_SUPPLY).div(2).sub(daiReserve);
 
-                await mogulDAIInstance.mint(OWNER.address, TaxPenalty);
-                await mogulDAIInstance.approve(mogulOrganisationInstance.contractAddress, TaxPenalty);
+                await mogulDAIInstance.mint(OWNER.address, taxPenalty);
+                await mogulDAIInstance.approve(mogulOrganisationInstance.contractAddress, taxPenalty);
 
                 await mogulOrganisationInstance.closeOrganisation();
 
@@ -645,13 +648,13 @@ describe('Mogul Organisation Contract', function () {
                 await mogulDAIInstance.mint(INVESTOR.address, INVESTMENT_AMOUNT);
                 await mogulDAIInstance.from(INVESTOR).approve(mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
 
-                const totalDaiInvested = await mogulOrganisationInstance.totalDAIInvestments();
+                const totalMglSupply = await mogulTokenInstance.totalSupply();
                 const daiReserve = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
 
-                const TaxPenalty = totalDaiInvested.sub(daiReserve).div(2);
+                const taxPenalty = totalMglSupply.mul(totalMglSupply).div(INITIAL_MOGUL_SUPPLY).div(2).sub(daiReserve);
 
-                await mogulDAIInstance.mint(OWNER.address, TaxPenalty);
-                await mogulDAIInstance.approve(mogulOrganisationInstance.contractAddress, TaxPenalty);
+                await mogulDAIInstance.mint(OWNER.address, taxPenalty);
+                await mogulDAIInstance.approve(mogulOrganisationInstance.contractAddress, taxPenalty);
 
                 await mogulOrganisationInstance.closeOrganisation();
 
@@ -664,13 +667,13 @@ describe('Mogul Organisation Contract', function () {
                 await mogulDAIInstance.mint(REPAYER.address, INVESTMENT_AMOUNT);
                 await mogulDAIInstance.from(REPAYER).approve(mogulOrganisationInstance.contractAddress, INVESTMENT_AMOUNT);
 
-                const totalDaiInvested = await mogulOrganisationInstance.totalDAIInvestments();
+                const totalMglSupply = await mogulTokenInstance.totalSupply();
                 const daiReserve = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
 
-                const TaxPenalty = totalDaiInvested.sub(daiReserve).div(2);
+                const taxPenalty = totalMglSupply.mul(totalMglSupply).div(INITIAL_MOGUL_SUPPLY).div(2).sub(daiReserve);
 
-                await mogulDAIInstance.mint(OWNER.address, TaxPenalty);
-                await mogulDAIInstance.approve(mogulOrganisationInstance.contractAddress, TaxPenalty);
+                await mogulDAIInstance.mint(OWNER.address, taxPenalty);
+                await mogulDAIInstance.approve(mogulOrganisationInstance.contractAddress, taxPenalty);
 
                 await mogulOrganisationInstance.closeOrganisation();
 
@@ -679,13 +682,13 @@ describe('Mogul Organisation Contract', function () {
 
             it('Should revert if one tries to close a closed c-org', async () => {
 
-                const totalDaiInvested = await mogulOrganisationInstance.totalDAIInvestments();
+                const totalMglSupply = await mogulTokenInstance.totalSupply();
                 const daiReserve = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
 
-                const TaxPenalty = totalDaiInvested.sub(daiReserve).div(2);
+                const taxPenalty = totalMglSupply.mul(totalMglSupply).div(INITIAL_MOGUL_SUPPLY).div(2).sub(daiReserve);
 
-                await mogulDAIInstance.mint(OWNER.address, TaxPenalty);
-                await mogulDAIInstance.approve(mogulOrganisationInstance.contractAddress, TaxPenalty);
+                await mogulDAIInstance.mint(OWNER.address, taxPenalty);
+                await mogulDAIInstance.approve(mogulOrganisationInstance.contractAddress, taxPenalty);
 
                 await mogulOrganisationInstance.closeOrganisation();
 
@@ -694,13 +697,13 @@ describe('Mogul Organisation Contract', function () {
 
             it('Should revoke investments correctly after closing the c-org', async () => {
 
-                let totalDaiInvested = await mogulOrganisationInstance.totalDAIInvestments();
+                const totalMglSupply = await mogulTokenInstance.totalSupply();
                 let daiReserve = await mogulDAIInstance.balanceOf(mogulOrganisationInstance.contractAddress);
 
-                const TaxPenalty = totalDaiInvested.sub(daiReserve).div(2);
+                const taxPenalty = totalMglSupply.mul(totalMglSupply).div(INITIAL_MOGUL_SUPPLY).div(2).sub(daiReserve);
 
-                await mogulDAIInstance.mint(OWNER.address, TaxPenalty);
-                await mogulDAIInstance.approve(mogulOrganisationInstance.contractAddress, TaxPenalty);
+                await mogulDAIInstance.mint(OWNER.address, taxPenalty);
+                await mogulDAIInstance.approve(mogulOrganisationInstance.contractAddress, taxPenalty);
 
                 await mogulOrganisationInstance.closeOrganisation();
 
