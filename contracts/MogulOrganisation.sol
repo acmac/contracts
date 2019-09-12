@@ -168,7 +168,7 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     }
     
     function closeOrganisation() public onlyOwner onlyWhenLive {
-        uint256 taxPenalty = (totalDAIInvestments.sub(mogulDAI.balanceOf(address(this)))).div(2);
+        uint256 taxPenalty = bondingMath.calcExitFee(mogulToken.totalSupply(), premintedMGL, mogulDAI.balanceOf(address(this)));
         
         require(mogulDAI.allowance(msg.sender, address(this)) >= taxPenalty, "closeOrganisation :: Owner tries to close organisation with unapproved DAI amount");
     
@@ -177,6 +177,10 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         mogulOrgState = State.CLOSED;
     
         emit CloseOrganisation(taxPenalty);
+    }
+    
+    function calcCloseTaxPenalty() public view returns(uint256) {
+        return bondingMath.calcExitFee(mogulToken.totalSupply(), premintedMGL, mogulDAI.balanceOf(address(this)));
     }
     
     function onTransfer(address from, address to, uint256 value) public {
