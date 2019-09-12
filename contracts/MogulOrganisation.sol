@@ -168,7 +168,7 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     }
     
     function closeOrganisation() public onlyOwner onlyWhenLive {
-        uint256 taxPenalty = bondingMath.calcExitFee(mogulToken.totalSupply(), premintedMGL, mogulDAI.balanceOf(address(this)));
+        uint256 taxPenalty = calcCloseTaxPenalty();
         
         require(mogulDAI.allowance(msg.sender, address(this)) >= taxPenalty, "closeOrganisation :: Owner tries to close organisation with unapproved DAI amount");
     
