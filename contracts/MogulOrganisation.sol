@@ -51,6 +51,15 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     event DividendPayed(address payer, uint256 amount);
     event CloseOrganisation(uint256 taxPenalty);
     
+    /*
+    * @dev Contract Constructor
+    *
+    * @param _bondingMath Address of contract calculating bonding mathematics based on sqrt
+    * @param _mogulDAI Address of DAI Token
+    * @param _mogulToken Address of Mogul Token
+    * @param _mogulBank Address of Mogul Bank
+    * @param _whiteLister Address of Mogul whiteLister
+    */
     constructor(address _bondingMath, address _mogulDAI, address _mogulToken, address _mogulBank, address _whiteLister) Whitelisting(_whiteLister) public {
         
         require(_mogulDAI != address(0), "constructor:: Mogul DAI address is required");
@@ -65,16 +74,28 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         bondingMath = BondingMathematics(_bondingMath);
     }
     
+    /*
+    * @dev function setMaxGasPrice - Fixed transaction gas price preventing Front-Running attacks
+    */
     function setMaxGasPrice(uint16 _maxGasPrice) public onlyAdmin {
         require(_maxGasPrice > 0, "setMaxGasPrice :: gas price can not be zero");
         maxGasPrice = _maxGasPrice;
     }
     
+    /*
+    * @dev function setMogulOrgAdminAddress - Possibility to change contract administrator address
+    */
     function setMogulOrgAdminAddress(address _newMogulOrgAdmin) public onlyAdmin {
         require(_newMogulOrgAdmin != address(0), "mogulOrgAdminAddress :: invalid address");
         mogulOrgAdmin = _newMogulOrgAdmin;
     }
     
+    /**
+    * @dev function invest - Allows investors to invest in Mogul Tokens. The amount of received tokens is calculated based ot bonding mathematics
+    *
+    * @param _daiAmount uint256 The amount of invested DAI Tokens
+    * @param signedData bytes Hash that should be signed from the whitelister wallet
+    */
     function invest(uint256 _daiAmount, bytes memory signedData) public onlyWhenLive {
         require(tx.gasprice == maxGasPrice);
         require(mogulOrgState == State.LIVE);
@@ -99,6 +120,11 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         emit Invest(msg.sender, _daiAmount);
     }
     
+    /*
+    * @dev function revokeInvestment Allows investors to sell their Mogul Tokens
+    *
+    * @param _amountMGL uint256 The amount of Mogul Tokens investor wants to sell
+    */
     function revokeInvestment(uint256 _amountMGL) public {
         require(tx.gasprice == maxGasPrice);
         if (mogulOrgState == State.LIVE) {
@@ -125,15 +151,31 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         }
     }
     
+    /*
+    * @dev function calcRelevantMGLForDAI Uses bonding mathematics to calculate Mogul Tokens purchase
+    *
+    * @param _daiAmount uint256 DAI tokens used to buy Mogul Tokens
+    */
     function calcRelevantMGLForDAI(uint256 _daiAmount) public view returns(uint256) {
         uint256 tokensAfterPurchase = bondingMath.calcPurchase(mogulToken.totalSupply(), premintedMGL, _daiAmount);
         return tokensAfterPurchase;
     }
     
+    /*
+    * @dev function calcRelevantDAIForMGL Uses bonding mathematics to calculate Mogul Tokens sell
+    *
+    * @param _daiAmount uint256 DAI tokens used to buy Mogul Tokens
+    */
     function calcRelevantDAIForMGL(uint256 coTokenAmount) public view returns(uint256) {
         return bondingMath.calcTokenSell(mogulToken.totalSupply(), mogulDAI.balanceOf(address(this)), coTokenAmount);
     }
     
+    /*
+    * @dev function payDividends Allows to send dividends back to the Mogul bank and CO reserve increasing the mogul Token price
+    *
+    * @param dividendAmount uint256 DAI Token amount payed back
+    * @param dividendRatio uint8 The rate that tokens should be split between Mogul Bank and CO reserve
+    */
     function payDividends(uint256 dividendAmount, uint8 dividendRatio)  public onlyWhenLive {
         require(dividendRatio <= 100, "dividendRatio is higher than maximum allowed");
         require(mogulDAI.balanceOf(address(this)) > 0, "payDividends:: Organisation is not unlocked for dividends payment yet");
@@ -147,6 +189,12 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         emit DividendPayed(msg.sender, dividendAmount);
     }
     
+    /*
+    * @dev function unlockOrganisation initiate Continuous organisation
+    *
+    * @param _unlockAmount DAI amount
+    * @param _initialMglSupply initial Mogul Tokens supply
+    */
     function unlockOrganisation(uint256 _unlockAmount, uint256 _initialMglSupply) public {
         require(mogulOrgState == State.LOCKED);
         require(mogulDAI.balanceOf(address(this)) == 0, "unlockOrganisation:: Organization is already unlocked");
@@ -167,6 +215,9 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         emit UnlockOrganisation(msg.sender, _unlockAmount, _initialMglSupply);
     }
     
+    /*
+    * @dev function closeOrganisation Cancels the CO and allows investors to restore their investments
+    */
     function closeOrganisation() public onlyOwner onlyWhenLive {
         uint256 taxPenalty = calcCloseTaxPenalty();
         

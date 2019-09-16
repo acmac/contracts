@@ -46,6 +46,13 @@ contract Voting is Ownable {
         _;
     }
     
+    /*
+    * @dev Contract Constructor
+    *
+    * @param _mogulTokenAddress Address of Mogul Token
+    * @param _daiTokenInstance Address of DAI Token
+    * @param _sqrtContract Address of sqrt calculations contract
+    */
     constructor(address _mogulTokenAddress, address _daiTokenInstance, address _sqrtContract) public {
         require(_sqrtContract != address(0), "constructor :: SQRT contract could not be an empty address");
         require(_mogulTokenAddress != address(0), "constructor :: Mogul token contract could not be an empty address");
@@ -56,6 +63,15 @@ contract Voting is Ownable {
         sqrtContract = _sqrtContract;
     }
     
+    /*
+    * @dev function createProposal Allows Voting Contract Admin to create voting round with set of movies
+    *
+    * @param _movieNames array of bytes32 movie names
+    * @param _sponsorshipReceiver array of addresses of fund receivers
+    * @param _requestedAmount array of uint256 of requested sponsorship amounts
+    * @param _startDate uint256 round start date
+    * @param _expirationDate uint256 round end date
+    */
     function createProposal(
         bytes32[] memory _movieNames,
         address[] memory _sponsorshipReceiver,
@@ -99,6 +115,11 @@ contract Voting is Ownable {
         emit ProposalCreated(rounds.length - 1, rounds[rounds.length - 1].proposalCount, _startDate, _expirationDate);
     }
     
+    /*
+    * @dev function vote allows investor to vote for specific movie
+    *
+    * @param _movieId uint8 Movie id
+    */
     function vote(uint8 _movieId) public {
         require(now >= rounds[currentRound].startDate && now <= rounds[currentRound].endDate, "vote :: now is not within a voting period for this round");
         require(rounds[currentRound].votedFor[msg.sender] == 0 || rounds[currentRound].votedFor[msg.sender] == _movieId + 1, "vote :: user is not allowed to vote more than once");
@@ -120,6 +141,9 @@ contract Voting is Ownable {
         emit Voted(currentRound, msg.sender, _movieId);
     }
     
+    /*
+    * @dev function finalizeRound allows contract admin to finalize an ended round
+    */
     function finalizeRound() public onlyOwner {
         require(rounds[currentRound].endDate < now, "finalizeRound :: the round is not finished");
 
@@ -143,6 +167,9 @@ contract Voting is Ownable {
         currentRound++;
     }
     
+    /*
+    * @dev function cancelRound allows contract admin to cancel a round
+    */
     function cancelRound() public onlyOwner {
         require(currentRound < rounds.length);
         
@@ -173,14 +200,29 @@ contract Voting is Ownable {
         }
     }
     
+    /*
+    * @dev function getRoundInfo returns given round info
+    *
+    * @param _round given round
+    *
+    * @returns round startDate, endDate, proposalCount, maxInvestment (largest investment request)
+    */
     function getRoundInfo(uint256 _round) public view returns (uint256, uint256, uint8, uint256){
         return (rounds[_round].startDate, rounds[_round].endDate, rounds[_round].proposalCount, rounds[_round].maxInvestment);
     }
     
+    /*
+    * @dev function getRounds returns rounds count
+    */
     function getRounds() public view returns (uint256){
         return rounds.length;
     }
     
+    /*
+    * @dev function getProposalInfo returns proposal info
+    *
+    * @returns proposal (movie) name, totalVotes, sponsorshipReceiver address, requestedAmount
+    */
     function getProposalInfo(uint256 _round, uint8 _proposal) public view returns (bytes32, uint256, address, uint256){
         return (rounds[_round].proposals[_proposal].name,
         rounds[_round].proposals[_proposal].totalVotes,
@@ -188,10 +230,16 @@ contract Voting is Ownable {
         rounds[_round].proposals[_proposal].requestedAmount);
     }
     
+    /*
+    * @dev function getVotersVotesInfo returns the votes that a voter has given
+    */
     function getVotersVotesInfo(uint256 _round, uint8 _proposal, address _voter) public view returns (uint256){
         return rounds[_round].proposals[_proposal].voterToVotes[_voter];
     }
     
+    /*
+    * @dev function getVoteInfo returns proposal on which voters voted
+    */
     function getVoteInfo(uint256 _round, address _voterAddress) public view returns (uint8){
         return (rounds[_round].votedFor[_voterAddress]);
     }
