@@ -36,6 +36,9 @@ contract Voting is Ownable {
     
     Round[] public rounds;
     
+    /*
+    * Events
+    */
     event ProposalCreated(uint256 indexed roundID, uint8 proposalsCount, uint256 startDate, uint256 endDate);
     event Voted(uint256 indexed roundID, address voter, uint8 propolsalID);
     event RoundFinalized(uint256 indexed roundID, uint8 winnerID);
@@ -180,6 +183,10 @@ contract Voting is Ownable {
         currentRound++;
     }
     
+    /*
+    * @dev function onTransfer Token movement notifier implementation
+    * if one transfer Mogul Tokens his vote is canceled
+    */
     function onTransfer(address from, address to, uint256 value) public onlyTokenAddress {
         if (rounds.length > 0) {
             if (rounds[currentRound].votedFor[from] != 0
@@ -190,6 +197,10 @@ contract Voting is Ownable {
         }
     }
     
+    /*
+    * @dev function onBurn Token movement notifier implementation
+    * if one sell Mogul Tokens his vote is canceled
+    */
     function onBurn(address from, uint256 value) public onlyTokenAddress {
         if (rounds.length > 0) {
             if (rounds[currentRound].votedFor[from] != 0
@@ -280,6 +291,11 @@ contract Voting is Ownable {
         return rating;
     }
     
+    /*
+    * @dev function __revokeVote Cancels investors vote
+    *
+    * @param from address The address which votes will be canceled
+    */
     function __revokeVote(address from) private {
         
         uint8 proposalIndex = rounds[currentRound].votedFor[from] - 1;

@@ -19,8 +19,6 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     address public mogulBank;
     address public mogulOrgAdmin;
     
-    uint256 public totalDAIInvestments = 0;
-
     uint256 public premintedMGL = 0;
     
     uint256 constant public DAI_RESERVE_REMAINDER = 5; // 20%
@@ -35,6 +33,9 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     
     State public mogulOrgState;
     
+    /*
+    * Modifiers
+    */
     modifier onlyWhenLive() {
         require(mogulOrgState == State.LIVE, "onlyWhenLive :: The Organisation iis not live");
         _;
@@ -45,6 +46,9 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         _;
     }
     
+    /*
+    * Events
+    */
     event Invest(address investor, uint256 amount);
     event Withdraw(address investor, uint256 amount);
     event UnlockOrganisation(address unlocker, uint256 initialAmount, uint256 initialMglSupply);
@@ -114,8 +118,6 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         mogulDAI.transferFrom(msg.sender, mogulBank, _daiAmount.sub(reserveDAIAmount));
 
         mogulToken.mint(msg.sender, mglTokensToMint);
-    
-        totalDAIInvestments = totalDAIInvestments.add(_daiAmount);
         
         emit Invest(msg.sender, _daiAmount);
     }
@@ -135,9 +137,7 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
             mogulDAI.transfer(msg.sender, daiToReturn);
     
             mogulToken.burnFrom(msg.sender, _amountMGL);
-    
-            totalDAIInvestments = totalDAIInvestments.sub(daiToReturn);
-    
+            
             emit Withdraw(msg.sender, daiToReturn);
         } else if (mogulOrgState == State.CLOSED) {
             require(mogulToken.allowance(msg.sender, address(this)) >= _amountMGL, "revokeInvestment:: Investor wants to withdraw MGL without allowance");
@@ -207,7 +207,6 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         
         mogulToken.mint(msg.sender, _initialMglSupply);
     
-        totalDAIInvestments = _unlockAmount;
         _setWhitelisted(msg.sender, true);
     
         mogulOrgState = State.LIVE;
@@ -222,22 +221,31 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         uint256 taxPenalty = calcCloseTaxPenalty();
         
         require(mogulDAI.allowance(msg.sender, address(this)) >= taxPenalty, "closeOrganisation :: Owner tries to close organisation with unapproved DAI amount");
-    
+
         mogulDAI.transferFrom(msg.sender, address(this), taxPenalty);
-    
+
         mogulOrgState = State.CLOSED;
-    
+
         emit CloseOrganisation(taxPenalty);
     }
     
+    /*
+    * @dev function calcCloseTaxPenalty Returns closing tax in DAI
+    */
     function calcCloseTaxPenalty() public view returns(uint256) {
         return bondingMath.calcExitFee(mogulToken.totalSupply(), premintedMGL, mogulDAI.balanceOf(address(this)));
     }
     
+    /*
+    * @dev function onTransfer Token movement notifier implementation
+    */
     function onTransfer(address from, address to, uint256 value) public {
         require(whiteList[to]);
     }
     
+    /*
+    * @dev onBurn onTransfer Token movement notifier implementation
+    */
     function onBurn(address from, uint256 value) public {
         require(whiteList[from]);
     }
