@@ -1,7 +1,7 @@
 # Mogul Studios Continuous Organization
 
 ## Summary
-The Continuous Organization smart contract system of Mogul Productions consists of several contracts. Main one of them is MogulOrganisation.sol defining the logic of the coninuous organisation. In addition to Mogul Organisation, there are couple more contracts that deal with the complex mathematics of the CO formulas. In order to ensure the accuracy (and the feasibility of implementation of the formula) the actual formulas are written in vyper.
+The Continuous Organization smart contract system of Mogul Productions consists of several contracts. Main one of them is MogulOrganisation.sol defining the logic of the continuous organisation. In addition to Mogul Organisation, there are couple more contracts that deal with the complex mathematics of the CO formulas. In order to ensure the accuracy (and the feasibility of implementation of the formula) the actual formulas are written in vyper.
 
 
 ## Continuous organization lifecycle
@@ -36,7 +36,7 @@ This is the state that the CO will be during the majority of its life. During th
 #### Invest
 `function invest(uint256 _daiAmount, bytes memory signedData) public onlyWhenLive` is the function used for investing in the CO. It can only be called when the CO is LIVE and has two parameters:
 - _daiAmount - the amount of USD you want to invest
-- signedData - signiture by the whitelister. This signature only needs to be passed if the investor is not whitelisted. Through this signature we have combined the whitelisting and investment process. The message signed by the whitelister should be keccak256 of the investor address.
+- signedData - signature by the whitelister. This signature only needs to be passed if the investor is not whitelisted. Through this signature we have combined the whitelisting and investment process. The message signed by the whitelister should be keccak256 of the investor address.
 
 This function has a set gasPrice to be called with in order to avoid front-running.
 
