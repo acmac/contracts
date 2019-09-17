@@ -1,6 +1,6 @@
-# Mogul Studios Continuous Organization
+# Mogul Continuous Organization
 
-## Summary
+## Continuous Organization
 Continuous Organizations (COs) is innovative method for group-sourcing funds for different initiatives. Through COs, new business models can be devised and high capital requiring investment opportunities can be opened up to even the investors with smaller budgets. 
 
 In their nature COs are a way to funnel investment from the crypto-digital world into the real world. When an investor invests funds into the CO, through cryptocurrency in a smart contract, they receive back tokens. You can think of this tokens as shares. 
@@ -15,7 +15,17 @@ In addition, in order to balance the risk-reward ratio of the early investors (w
 
 For detailed info and better understanding : [https://github.com/C-ORG/whitepaper](https://github.com/C-ORG/whitepaper)
 
-One such undertaking is the Mogul Productions innovative method for group-sourcing funds for movies production. The project consists of two major parts - the continuous organization smart contract system and the voting system. Both of them have their own dedicated overview and specification pages:
+## Mogul Studios
 
-[docs/ContinuousOrganisation.md](Continuous Organisation)
-[docs/VotingContract.md](Voting System)
+One such undertaking is the Mogul Productions innovative method for group-sourcing funds for movies production. 
+
+Mogul Productions will set up a CO in order to group-source funds to invest in movies. The tokens received by the investors will be used for voting on a film to be invested in. The choices of films that an investor can invest in is selected by a highly qualified panel. The investors can vote in accordance with the amount of CO tokens they hold.
+
+The project consists of two major parts - the continuous organization smart contract system and the voting system. Both of them have their own dedicated overview and specification pages:
+
+- [Continuous Organization](docs/ContinuousOrganisation.md)
+- [Voting System](docs/VotingContract.md)
+
+## Current unit tests coverage
+
+![alt text](docs/MogulUnitTests.png "Logo Title Text 1")
