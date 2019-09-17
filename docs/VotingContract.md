@@ -59,3 +59,34 @@ This is the phase after the voting has finished. During this phase the proposer 
  
 
 ## Functions Specification
+
+### Creating Investment Round
+```
+function createProposal(
+	bytes32[] memory _movieNames, 
+	address[] memory _sponsorshipReceiver,
+	uint256[] memory _requestedAmount,
+	uint256 _startDate,
+	uint256 _expirationDate) public onlyOwner
+```
+
+This function is used for creating of an investment round. It can only be called by the owner/proposer. The expected parameters include, list of proposed movies, start date and end date of the proposal. The proposed movies passed as three separate arrays - for their name, sponsorship receiver and how much they are requesting.
+
+The sanity checks performed in this functions are:
+- Verifying that the start and endDates are in the future, end date is later than the start date and the start date is after the last known end date of a round.
+- The movie arrays are of equal length
+
+Once all of this is verified a `Round` object is constructed and added to the rounds array `rounds`
+
+### Voting on a proposal
+
+Once within the time boundaries of a round, an investor can vote for the movie they like. They can only vote for one movie with their vote weight being SQRT(10*MGL Tokens). The function used for voting is:
+`function vote(uint8 _movieId) public`
+
+This can be called by anyone having MGL tokens in order to vote for the movie with index `movieId`. The function will perform the round boundaries verification, perform the quadratic calculation and account the votes. This function will revert if called before the previous round is finalized.
+
+### Finalizing
+Round is finalized through the function `function finalizeRound() public onlyOwner`. It performs checks on the round boundaries and determines winner. In addition it disburses the funds to the winner of the round.
+
+### Vote withdrawal
+In order to eliminate double voting a vote-withdrawal mechanism is implemented. If a user transfers their tokens, their votes in the current round are automatically withdrawn.
