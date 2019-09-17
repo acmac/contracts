@@ -203,7 +203,7 @@ contract Voting is Ownable {
     /*
     * @dev function getRoundInfo returns given round info
     *
-    * @param _round given round
+    * @param _round given round by index
     *
     * @returns round startDate, endDate, proposalCount, maxInvestment (largest investment request)
     */
@@ -221,6 +221,9 @@ contract Voting is Ownable {
     /*
     * @dev function getProposalInfo returns proposal info
     *
+    * @param _round uint256 given round by index
+    * @param _proposal uint8 given proposal by index
+    *
     * @returns proposal (movie) name, totalVotes, sponsorshipReceiver address, requestedAmount
     */
     function getProposalInfo(uint256 _round, uint8 _proposal) public view returns (bytes32, uint256, address, uint256){
@@ -232,6 +235,12 @@ contract Voting is Ownable {
     
     /*
     * @dev function getVotersVotesInfo returns the votes that a voter has given
+    *
+    * @param _round uint256 given round by index
+    * @param _proposal uint8 given proposal by index
+    * @param _voter address the address of the voter
+    *
+    * @returns the number of votes that a voter has given
     */
     function getVotersVotesInfo(uint256 _round, uint8 _proposal, address _voter) public view returns (uint256){
         return rounds[_round].proposals[_proposal].voterToVotes[_voter];
@@ -239,6 +248,11 @@ contract Voting is Ownable {
     
     /*
     * @dev function getVoteInfo returns proposal on which voters voted
+    *
+    * @param _round uint256 given round by index
+    * @param _voter address the address of the voter
+    *
+    * @returns proposal on which voters voted
     */
     function getVoteInfo(uint256 _round, address _voterAddress) public view returns (uint8){
         return (rounds[_round].votedFor[_voterAddress]);

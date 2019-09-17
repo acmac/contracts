@@ -164,7 +164,7 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     /*
     * @dev function calcRelevantDAIForMGL Uses bonding mathematics to calculate Mogul Tokens sell
     *
-    * @param _daiAmount uint256 DAI tokens used to buy Mogul Tokens
+    * @param coTokenAmount uint256 Mogul tokens to sell
     */
     function calcRelevantDAIForMGL(uint256 coTokenAmount) public view returns(uint256) {
         return bondingMath.calcTokenSell(mogulToken.totalSupply(), mogulDAI.balanceOf(address(this)), coTokenAmount);
