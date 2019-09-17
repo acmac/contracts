@@ -25,7 +25,7 @@ Once the deployment is complete the CO goes into the `LOCKED` state.
 Once the CO is deployed it enters the Locked state. No contribution can happen in this state. The only function that can be called during this phase is `unlockOrganisation`.
 
 #### unlockOrganisation
-`unlockOrganisation(uint256 _unlockAmount, uint256 _initialMglSupply)` is the function used to unlock the CO for investment. It can only be called once and has two parameters - how much initial funds the admin is contributing to the organization (`_unlockAmount`) and how much MGL he is going to receive back for this contribution.
+`unlockOrganisation(uint256 organiserUSDContribution, uint256 organiserMGLReward)` is the function used to unlock the CO for investment. It can only be called once and has two parameters - how much initial funds the admin is contributing to the organization (`organiserUSDContribution`) and how much MGL he is going to receive back for this contribution (`organiserMGLReward`).
 These two parameters are crucial as their ratio defines the buy slope used in the calculations for the next investments.
 
 Once the unlockOrganisation function is successfully executed the CO goes into the `LIVE` state.
@@ -34,8 +34,8 @@ Once the unlockOrganisation function is successfully executed the CO goes into t
 This is the state that the CO will be during the majority of its life. During this stage investments, sells and dividends payouts can be done. You will find an overview of the available functions below
 
 #### Invest
-`function invest(uint256 _daiAmount, bytes memory signedData) public onlyWhenLive` is the function used for investing in the CO. It can only be called when the CO is LIVE and has two parameters:
-- _daiAmount - the amount of USD you want to invest
+`function invest(uint256 usdAmount, bytes memory signedData) public onlyWhenLive` is the function used for investing in the CO. It can only be called when the CO is LIVE and has two parameters:
+- usdAmount - the amount of USD you want to invest
 - signedData - signature by the whitelister. This signature only needs to be passed if the investor is not whitelisted. Through this signature we have combined the whitelisting and investment process. The message signed by the whitelister should be keccak256 of the investor address.
 
 This function has a set gasPrice to be called with in order to avoid front-running.
@@ -43,7 +43,7 @@ This function has a set gasPrice to be called with in order to avoid front-runni
 Once the function is called and the different sanity checks are performed the invest function checks whether the investor is whitelisted and performs the whitelisting ritual or reverts. After that, the function asks the BondingMathematics contract to calculate how much MGL should be minted and mints it to the investor and takes the investment. The investment is then split between the Mogul Bank and CO Reserve in accordance with the reserver ratio. More info on Reserve ration and reserves here: [https://github.com/C-ORG/whitepaper](https://github.com/C-ORG/whitepaper) 
 
 #### Sell
-`function revokeInvestment(uint256 _amountMGL)` is the function used for selling MGL to the CO. It can only be called when the CO is LIVE or CLOSED and has one parameter:
+`function sell(uint256 _amountMGL)` is the function used for selling MGL to the CO. It can only be called when the CO is LIVE or CLOSED and has one parameter:
 
 - _amountMGL - the amount of MGL you want to sell
 
@@ -67,7 +67,7 @@ This function calculates a fee that needs to be paid by the owner for closing th
 This is the state triggered by the admin calling the closeOrganisation function. In this period only one function can be called - sell.
 
 #### Sell
-`function revokeInvestment(uint256 _amountMGL)` is the function used for selling MGL to the CO.
+`function sell(uint256 _amountMGL)` is the function used for selling MGL to the CO.
 
 While in CLOSED state the sell function will return the USD to the seller proportionally to their balance. You will receive the % of the reserve that corresponds to the % of MGL you own. After this the MGL is burned.
 
