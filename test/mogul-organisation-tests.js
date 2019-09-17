@@ -411,7 +411,7 @@ describe('Mogul Organisation Contract', function () {
                 let expectedDai = sellCalc(organisationMogulBalance, reserveBalance, mglTokens);
 
                 await mogulTokenInstance.approve(mogulOrganisationInstance.contractAddress, mglTokens);
-                await mogulOrganisationInstance.from(INVESTOR).revokeInvestment(mglTokens, {
+                await mogulOrganisationInstance.from(INVESTOR).sell(mglTokens, {
                     gasPrice: MAX_GAS_PRICE,
                     gasLimit: 250000
                 });
@@ -439,7 +439,7 @@ describe('Mogul Organisation Contract', function () {
                 });
 
                 await mogulTokenInstance.approve(mogulOrganisationInstance.contractAddress, mglTokens);
-                await mogulOrganisationInstance.from(INVESTOR).revokeInvestment(mglTokens, {
+                await mogulOrganisationInstance.from(INVESTOR).sell(mglTokens, {
                     gasPrice: MAX_GAS_PRICE,
                     gasLimit: 250000
                 });
@@ -453,7 +453,7 @@ describe('Mogul Organisation Contract', function () {
 
             it('Should revert if one tries to sell unapproved tokens', async () => {
                 let tokens = "414213562299999999";
-                await assert.revert(mogulOrganisationInstance.from(INVESTOR).revokeInvestment(tokens, {
+                await assert.revert(mogulOrganisationInstance.from(INVESTOR).sell(tokens, {
                     gasPrice: MAX_GAS_PRICE,
                     gasLimit: 250000
                 }));
@@ -462,7 +462,7 @@ describe('Mogul Organisation Contract', function () {
 
             it("Should revert if one tries to sell tokens that he doesn't have", async () => {
                 let tokens = "414213562299999999";
-                await assert.revert(mogulOrganisationInstance.from(OWNER).revokeInvestment(tokens, {
+                await assert.revert(mogulOrganisationInstance.from(OWNER).sell(tokens, {
                     gasPrice: MAX_GAS_PRICE,
                     gasLimit: 250000
                 }));
@@ -710,7 +710,7 @@ describe('Mogul Organisation Contract', function () {
                 let mglTokens = await mogulTokenInstance.balanceOf(INVESTOR.address);
 
                 await mogulTokenInstance.from(INVESTOR.address).approve(mogulOrganisationInstance.contractAddress, mglTokens);
-                await mogulOrganisationInstance.from(INVESTOR).revokeInvestment(mglTokens, {
+                await mogulOrganisationInstance.from(INVESTOR).sell(mglTokens, {
                     gasPrice: MAX_GAS_PRICE,
                     gasLimit: 250000
                 });
@@ -720,7 +720,7 @@ describe('Mogul Organisation Contract', function () {
 
                 await mogulTokenInstance.approve(mogulOrganisationInstance.contractAddress, ownerMGL);
 
-                await mogulOrganisationInstance.revokeInvestment(ownerMGL, {
+                await mogulOrganisationInstance.sell(ownerMGL, {
                     gasPrice: MAX_GAS_PRICE,
                     gasLimit: 250000
                 });

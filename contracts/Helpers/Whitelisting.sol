@@ -46,7 +46,7 @@ contract Whitelisting is Ownable {
     /*
     * @dev function confirmedByWhiteLister performs a check if the user is whitelisted
     *
-    * @param signature bytes is signed user address by contract whitelister
+    * @param signature bytes is signed keccak256 of the user we are whitelisting
     */
     function confirmedByWhiteLister(bytes memory signature) internal view returns (bool) {
         bytes32 bytes32Message = keccak256(abi.encodePacked(msg.sender));
