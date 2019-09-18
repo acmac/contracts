@@ -121,6 +121,10 @@ describe('Voting Contract', function () {
 
             let roundInfo = await votingContract.getRoundInfo(0);
 
+            let rounds = await votingContract.getRounds();
+            let expectedRounds = 1;
+
+            assert(rounds.eq(expectedRounds));
             assert(roundInfo[0].eq(startDate));
             assert(roundInfo[1].eq(endDate));
             assert.strictEqual(roundInfo[2], MOVIE_NAMES.length);
@@ -238,6 +242,8 @@ describe('Voting Contract', function () {
             await votingContract.createRound(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             });
+
+            await mogulTokenContract.addMovementNotifier(votingContract.contractAddress);
 
             await utils.setTimeTo(provider, startDate);
         });
@@ -421,7 +427,24 @@ describe('Voting Contract', function () {
         });
 
         it('Should revoke vote if one transfer his mogul tokens', async () => {
+
             await mogulTokenContract.from(INVESTOR.address).transfer(OWNER.address, ONE_ETH);
+
+            let votes = await votingContract.getVotersVotesInfo(0, 0, INVESTOR.address);
+            let voteInfo = await votingContract.getVoteInfo(0, INVESTOR.address);
+            let roundInfo = await votingContract.getProposalInfo(0, 0);
+
+            assert(votes.eq(0));
+            assert.strictEqual(voteInfo, 0);
+            // roundInfo[2] => proposal total votes
+            assert(roundInfo[1].eq(0));
+
+        });
+
+        it('Should revoke vote if one transferFrom mogul tokens', async () => {
+            await mogulTokenContract.from(INVESTOR.address).approve(OWNER.address, ONE_ETH);
+
+            await mogulTokenContract.from(OWNER.address).transferFrom(INVESTOR.address, OWNER.address, ONE_ETH);
 
             let votes = await votingContract.getVotersVotesInfo(0, 0, INVESTOR.address);
             let voteInfo = await votingContract.getVoteInfo(0, INVESTOR.address);
