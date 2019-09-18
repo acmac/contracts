@@ -1,10 +1,10 @@
 const etherlime = require('etherlime-lib');
 
-const MogulDAI = require('./../../build/MogulDAI');
+const MogulUSD = require('./../../build/MogulUSD');
 const MogulToken = require('./../../build/MogulToken');
 
-const SQRT = require('./../../build/SQRT');
-const TokensSQRT = require('./../../build/TokensSQRT');
+const SQRT = require('./../../build/BondingCurveCalculations');
+const TokensSQRT = require('./../../build/QuadraticVotingCalculations');
 const BondingMathematics = require('./../../build/BondingMathematics');
 
 const MogulOrganisation = require('./../../build/MogulOrganisation');
@@ -63,7 +63,7 @@ let deployBondingMath = async () => {
 };
 
 let deployMglDai = async () => {
-    return deployer.deploy(MogulDAI);
+    return deployer.deploy(MogulUSD);
 };
 
 let mintDAI = async (mogulDAIInstance, to, amount) => {

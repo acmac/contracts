@@ -5,7 +5,7 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20Burnable.sol";
 
 // POC purposes
-contract MogulDAI is ERC20Detailed, ERC20Mintable, ERC20Burnable  {
+contract MogulUSD is ERC20Detailed, ERC20Mintable, ERC20Burnable  {
 
     constructor() ERC20Detailed (
         "Mogul DAI",

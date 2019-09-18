@@ -1,18 +1,17 @@
 const ethers = require('ethers');
 const etherlime = require('etherlime-lib');
 
-const DAIToken = require('./../build/MogulDAI');
+const DAIToken = require('./../build/MogulUSD');
 const MogulToken = require('./../build/MogulToken');
 
 const Voting = require('./../build/Voting');
-const DAIExchange = require('./../build/DAIExchange');
 const BondingMath = require('./../build/BondingMathematics');
 const MogulOrganization = require('./../build/MogulOrganisation');
 
-const MultisigWallet = require('./../build/MultiSigWallet');
+// const MultisigWallet = require('./../build/MultiSigWallet');
 
-const BondingSQRT = require('./../build/SQRT');
-const TokensSQRT = require('./../build/TokensSQRT');
+const BondingSQRT = require('./../build/BondingCurveCalculations.json');
+const TokensSQRT = require('./../build/QuadraticVotingCalculations.json');
 
 const ONE_ETH = ethers.utils.bigNumberify("1000000000000000000");
 const UNLOCK_AMOUNT = ONE_ETH.mul(2500000);
@@ -24,11 +23,6 @@ let MOGUL_BANK_LOCAL = '0xd4fa489eacc52ba59438993f37be9fcc20090e39';
 let WHITELISTER_ADDRESS = '0x3EDBA762A053B939e581a6A2330a1B6470C14412';
 let WHITELISTER_ADDRESS_LOCAL = '0x760bf27cd45036a6c486802d30b5d90cffbe31fe';
 let DAI_TOKEN_ADDRESS = '0x1eaCe4925162117ec72586CD5Bee1C9cE0053e36';
-
-// let localUser1PrKey = "0xf41486fdb04505e7966c8720a353ed92ce0d6830f8a5e915fbde735106a06d25";
-// let localUser1Address = "0x28bf45680ca598708e5cdacc1414fcac04a3f1ed";
-// let localUser2PrKey = "0x6ca40ba4cca775643398385022264c0c414da1abd21d08d9e7136796a520a543";
-// let localUser2Address = "0xf0508f89e26bd6b00f66a9d467678c7ed16a3c5a";
 
 const ENV = {
     LOCAL: 'LOCAL',
@@ -42,7 +36,7 @@ const DEPLOYERS = {
 
 const deploy = async (network, secret) => {
 
-    const env = ENV.TEST;
+    const env = ENV.LOCAL;
 
     // // Change ENV in order to deploy on test net (Ropsten)
     const deployer = getDeployer(env, secret);
@@ -50,9 +44,6 @@ const deploy = async (network, secret) => {
     const daiContract = await getDAIContract(deployer);
     let mogulBankAddress = getMogulBankAddress(env);
     let whitelisterAddress = getWhitelisterAddress(env);
-
-    // let daiExchangeContract = await deployDAIExchange(deployer, daiContract);
-    // await daiContract.addMinter(daiExchangeContract.contractAddress);
 
     await daiContract.mint("0x4555A429Df5Cc32efa46BCb1412a3CD7Bf14b381", UNLOCK_AMOUNT);
     // await daiContract.mint(localUser1Address, "100000000000000000000");
@@ -112,11 +103,6 @@ let getDAIContract = async function (deployer) {
     }
 
     return new ethers.Contract(DAI_TOKEN_ADDRESS, DAIToken.abi, deployer.signer);
-};
-
-let deployDAIExchange = async function (deployer, daiToken) {
-    const exchangeContractDeployed = await deployer.deploy(DAIExchange, {}, daiToken.address);
-    return exchangeContractDeployed;
 };
 
 let deployMogulToken = async function (deployer) {
