@@ -39,7 +39,7 @@ contract Voting is Ownable {
     /*
     * Events
     */
-    event ProposalCreated(uint256 indexed roundID, uint8 proposalsCount, uint256 startDate, uint256 endDate);
+    event RoundCreated(uint256 indexed roundID, uint8 proposalsCount, uint256 startDate, uint256 endDate);
     event Voted(uint256 indexed roundID, address voter, uint8 propolsalID);
     event RoundFinalized(uint256 indexed roundID, uint8 winnerID);
     event CancelRound(uint256 indexed roundID);
@@ -67,7 +67,7 @@ contract Voting is Ownable {
     }
     
     /*
-    * @dev function createProposal Allows Voting Contract Admin to create voting round with set of movies
+    * @dev function createRound Allows Voting Contract Admin to create voting round with set of movies
     *
     * @param _movieNames array of bytes32 movie names
     * @param _sponsorshipReceiver array of addresses of fund receivers
@@ -75,18 +75,19 @@ contract Voting is Ownable {
     * @param _startDate uint256 round start date
     * @param _expirationDate uint256 round end date
     */
-    function createProposal(
+    function createRound(
         bytes32[] memory _movieNames,
         address[] memory _sponsorshipReceiver,
         uint256[] memory _requestedAmount,
         uint256 _startDate,
         uint256 _expirationDate
     ) public onlyOwner {
-        require(_startDate >= now, "createProposal :: Start date cannot be in the past");
-        require(_expirationDate > _startDate, "createProposal :: Start date cannot be after expiration date");
-        require(_startDate > lastVotingDate, "createProposal :: Start date must be after last voting date");
+        require(_startDate >= now, "createRound :: Start date cannot be in the past");
+        require(_expirationDate > _startDate, "createRound :: Start date cannot be after expiration date");
+        require(_startDate > lastVotingDate, "createRound :: Start date must be after last voting date");
+        require(_movieNames.length > 1, "createRound :: There should be at least two movies");
         require(_movieNames.length == _sponsorshipReceiver.length
-            && _sponsorshipReceiver.length == _requestedAmount.length, "createProposal :: proposals data count is different");
+            && _sponsorshipReceiver.length == _requestedAmount.length, "createRound :: proposals data count is different");
             uint256 largestInvestment = getLargestInvestment(_requestedAmount);
         
         daiTokenContract.transferFrom(msg.sender, address(this), largestInvestment);
@@ -115,7 +116,7 @@ contract Voting is Ownable {
             rounds[rounds.length - 1].proposals[i] = currentProposal;
         }
         
-        emit ProposalCreated(rounds.length - 1, rounds[rounds.length - 1].proposalCount, _startDate, _expirationDate);
+        emit RoundCreated(rounds.length - 1, rounds[rounds.length - 1].proposalCount, _startDate, _expirationDate);
     }
     
     /*
@@ -124,11 +125,12 @@ contract Voting is Ownable {
     * @param _movieId uint8 Movie id
     */
     function vote(uint8 _movieId) public {
+        uint8 movieNumber = _movieId + 1;
         require(now >= rounds[currentRound].startDate && now <= rounds[currentRound].endDate, "vote :: now is not within a voting period for this round");
-        require(rounds[currentRound].votedFor[msg.sender] == 0 || rounds[currentRound].votedFor[msg.sender] == _movieId + 1, "vote :: user is not allowed to vote more than once");
+        require(rounds[currentRound].votedFor[msg.sender] == 0 || rounds[currentRound].votedFor[msg.sender] == movieNumber, "vote :: user is not allowed to vote more than once");
         require(rounds[currentRound].proposalCount > _movieId, "vote :: there is no such movie id in this round");
         
-        if (rounds[currentRound].votedFor[msg.sender] == _movieId + 1) {
+        if (rounds[currentRound].votedFor[msg.sender] == movieNumber) {
             rounds[currentRound].proposals[_movieId].totalVotes = rounds[currentRound].proposals[_movieId].totalVotes.sub(rounds[currentRound].proposals[_movieId].voterToVotes[msg.sender]);
         }
         
@@ -139,7 +141,7 @@ contract Voting is Ownable {
         rounds[currentRound].proposals[_movieId].totalVotes = rounds[currentRound].proposals[_movieId].totalVotes.add(rating);
         
         // we are using the first element /0/ for empty votes
-        rounds[currentRound].votedFor[msg.sender] = _movieId + 1;
+        rounds[currentRound].votedFor[msg.sender] = movieNumber;
         
         emit Voted(currentRound, msg.sender, _movieId);
     }

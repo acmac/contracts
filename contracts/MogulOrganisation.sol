@@ -21,7 +21,7 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     
     uint256 public premintedMGL = 0;
     
-    uint256 constant public DAI_RESERVE_REMAINDER = 5; // 20%
+    uint256 constant public USD_RESERVE_REMAINDER = 5; // 20%
     
     uint16 public maxGasPrice = 30;
     
@@ -59,14 +59,14 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     * @dev Contract Constructor
     *
     * @param _bondingMath Address of contract calculating bonding mathematics based on sqrt
-    * @param _mogulUSD Address of DAI Token
+    * @param _mogulUSD Address of USD Token
     * @param _mogulToken Address of Mogul Token
     * @param _mogulBank Address of Mogul Bank
     * @param _whiteLister Address of Mogul whiteLister
     */
     constructor(address _bondingMath, address _mogulUSD, address _mogulToken, address _mogulBank, address _whiteLister) Whitelisting(_whiteLister) public {
         
-        require(_mogulUSD != address(0), "constructor:: Mogul DAI address is required");
+        require(_mogulUSD != address(0), "constructor:: Mogul USD address is required");
         require(_mogulBank != address(0), "constructor:: Mogul Bank address is required");
         require(_bondingMath != address(0), "constructor:: Bonding Math address is required");
 
@@ -97,24 +97,24 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     /**
     * @dev function invest - Allows investors to invest in Mogul Tokens. The amount of received tokens is calculated based ot bonding mathematics
     *
-    * @param usdAmount uint256 The amount of invested DAI Tokens
+    * @param usdAmount uint256 The amount of invested USD Tokens
     * @param signedData bytes Hash that should be signed from the whitelister wallet
     */
     function invest(uint256 usdAmount, bytes memory signedData) public onlyWhenLive {
         require(tx.gasprice == maxGasPrice);
         require(mogulUSD.balanceOf(address(this)) > 0, "invest:: Organisation is not unlocked for investments yet");
-        require(mogulUSD.allowance(msg.sender, address(this)) >= usdAmount, "invest:: Investor tries to invest with unapproved DAI amount");
+        require(mogulUSD.allowance(msg.sender, address(this)) >= usdAmount, "invest:: Investor tries to invest with unapproved USD amount");
         
         if (!whiteList[msg.sender]) {
             require(confirmedByWhiteLister(signedData));
             _setWhitelisted(msg.sender, true);
         }
 
-        uint256 mglTokensToMint = calcRelevantMGLForDAI(usdAmount);
+        uint256 mglTokensToMint = calcRelevantMGLForUSD(usdAmount);
 
-        uint256 reserveDAIAmount = usdAmount.div(DAI_RESERVE_REMAINDER);
-        mogulUSD.transferFrom(msg.sender, address(this), reserveDAIAmount);
-        mogulUSD.transferFrom(msg.sender, mogulBank, usdAmount.sub(reserveDAIAmount));
+        uint256 reserveUSDAmount = usdAmount.div(USD_RESERVE_REMAINDER);
+        mogulUSD.transferFrom(msg.sender, address(this), reserveUSDAmount);
+        mogulUSD.transferFrom(msg.sender, mogulBank, usdAmount.sub(reserveUSDAmount));
 
         mogulToken.mint(msg.sender, mglTokensToMint);
         
@@ -131,48 +131,48 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         if (mogulOrgState == State.LIVE) {
             require(mogulToken.allowance(msg.sender, address(this)) >= _amountMGL, "revokeInvestment:: Investor wants to withdraw MGL without allowance");
     
-            uint256 daiToReturn = bondingMath.calcTokenSell(mogulToken.totalSupply(), mogulUSD.balanceOf(address(this)), _amountMGL);
+            uint256 usdToReturn = bondingMath.calcTokenSell(mogulToken.totalSupply(), mogulUSD.balanceOf(address(this)), _amountMGL);
     
-            mogulUSD.transfer(msg.sender, daiToReturn);
+            mogulUSD.transfer(msg.sender, usdToReturn);
     
             mogulToken.burnFrom(msg.sender, _amountMGL);
             
-            emit Withdraw(msg.sender, daiToReturn);
+            emit Withdraw(msg.sender, usdToReturn);
         } else if (mogulOrgState == State.CLOSED) {
             require(mogulToken.allowance(msg.sender, address(this)) >= _amountMGL, "revokeInvestment:: Investor wants to withdraw MGL without allowance");
             
-            uint256 daiToReturn = mogulUSD.balanceOf(address(this)).mul(_amountMGL).div(mogulToken.totalSupply());
+            uint256 usdToReturn = mogulUSD.balanceOf(address(this)).mul(_amountMGL).div(mogulToken.totalSupply());
     
-            mogulUSD.transfer(msg.sender, daiToReturn);
+            mogulUSD.transfer(msg.sender, usdToReturn);
             mogulToken.burnFrom(msg.sender, _amountMGL);
     
-            emit Withdraw(msg.sender, daiToReturn);
+            emit Withdraw(msg.sender, usdToReturn);
         }
     }
     
     /*
-    * @dev function calcRelevantMGLForDAI Uses bonding mathematics to calculate Mogul Tokens purchase
+    * @dev function calcRelevantMGLForUSD Uses bonding mathematics to calculate Mogul Tokens purchase
     *
-    * @param usdAmount uint256 DAI tokens used to buy Mogul Tokens
+    * @param usdAmount uint256 USD used to buy Mogul Tokens
     */
-    function calcRelevantMGLForDAI(uint256 usdAmount) public view returns(uint256) {
+    function calcRelevantMGLForUSD(uint256 usdAmount) public view returns(uint256) {
         uint256 tokensAfterPurchase = bondingMath.calcPurchase(mogulToken.totalSupply(), premintedMGL, usdAmount);
         return tokensAfterPurchase;
     }
     
     /*
-    * @dev function calcRelevantDAIForMGL Uses bonding mathematics to calculate Mogul Tokens sell
+    * @dev function calcRelevantUSDForMGL Uses bonding mathematics to calculate Mogul Tokens sell
     *
     * @param coTokenAmount uint256 Mogul tokens to sell
     */
-    function calcRelevantDAIForMGL(uint256 coTokenAmount) public view returns(uint256) {
+    function calcRelevantUSDForMGL(uint256 coTokenAmount) public view returns(uint256) {
         return bondingMath.calcTokenSell(mogulToken.totalSupply(), mogulUSD.balanceOf(address(this)), coTokenAmount);
     }
     
     /*
     * @dev function payDividends Allows to send dividends back to the Mogul bank and CO reserve increasing the mogul Token price
     *
-    * @param dividendAmount uint256 DAI Token amount payed back
+    * @param dividendAmount uint256 USD Token amount payed back
     * @param dividendRatio uint8 The rate that tokens should be split between Mogul Bank and CO reserve
     */
     function payDividends(uint256 dividendAmount, uint8 dividendRatio)  public onlyWhenLive {
@@ -191,7 +191,7 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     /*
     * @dev function unlockOrganisation initiate Continuous organisation
     *
-    * @param organiserUSDContribution DAI amount
+    * @param organiserUSDContribution USD amount
     * @param organiserMGLReward initial Mogul Tokens supply
     */
     function unlockOrganisation(uint256 organiserUSDContribution, uint256 organiserMGLReward) public onlyOwner {
@@ -199,8 +199,8 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
         require(mogulUSD.balanceOf(address(this)) == 0, "unlockOrganisation:: Organization is already unlocked");
         require(mogulUSD.allowance(msg.sender, address(this)) >= organiserUSDContribution, "unlockOrganisation:: Unlocker tries to unlock with unapproved amount");
 
-        mogulUSD.transferFrom(msg.sender, address(this), organiserUSDContribution.div(DAI_RESERVE_REMAINDER));
-        mogulUSD.transferFrom(msg.sender, mogulBank, organiserUSDContribution.sub(organiserUSDContribution.div(DAI_RESERVE_REMAINDER)));
+        mogulUSD.transferFrom(msg.sender, address(this), organiserUSDContribution.div(USD_RESERVE_REMAINDER));
+        mogulUSD.transferFrom(msg.sender, mogulBank, organiserUSDContribution.sub(organiserUSDContribution.div(USD_RESERVE_REMAINDER)));
 
         premintedMGL = organiserMGLReward;
         
@@ -219,7 +219,7 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     function closeOrganisation() public onlyOwner onlyWhenLive {
         uint256 taxPenalty = calcCloseTaxPenalty();
         
-        require(mogulUSD.allowance(msg.sender, address(this)) >= taxPenalty, "closeOrganisation :: Owner tries to close organisation with unapproved DAI amount");
+        require(mogulUSD.allowance(msg.sender, address(this)) >= taxPenalty, "closeOrganisation :: Owner tries to close organisation with unapproved USD amount");
 
         mogulUSD.transferFrom(msg.sender, address(this), taxPenalty);
 
@@ -229,7 +229,7 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     }
     
     /*
-    * @dev function calcCloseTaxPenalty Returns closing tax in DAI
+    * @dev function calcCloseTaxPenalty Returns closing tax in USD
     */
     function calcCloseTaxPenalty() public view returns(uint256) {
         return bondingMath.calcExitFee(mogulToken.totalSupply(), premintedMGL, mogulUSD.balanceOf(address(this)));

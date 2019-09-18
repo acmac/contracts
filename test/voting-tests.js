@@ -112,7 +112,7 @@ describe('Voting Contract', function () {
         });
 
         it('Should make a proposal correctly', async () => {
-            await votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate,{
+            await votingContract.createRound(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate,{
                 gasLimit: 2700000
             });
 
@@ -134,24 +134,24 @@ describe('Voting Contract', function () {
         });
 
         it('Should revert if start date is after end date', async () => {
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, endDate, startDate, {
+            await assert.revert(votingContract.createRound(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, endDate, startDate, {
                 gasLimit: 2700000
             }));
         });
 
         it('Should revert if start date is in the past', async () => {
             let dateInPast = endDate = Math.floor(today.setDate(today.getDate() - 30) / 1000);
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, dateInPast, endDate, {
+            await assert.revert(votingContract.createRound(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, dateInPast, endDate, {
                 gasLimit: 2700000
             }));
         });
 
         it('Should revert if start date is before last voting date', async () => {
-            await votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await votingContract.createRound(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             });
             let dateDuringVotingPeriod = endDate = Math.floor(today.setDate(today.getDate() + 15) / 1000);
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, dateDuringVotingPeriod, endDate, {
+            await assert.revert(votingContract.createRound(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, dateDuringVotingPeriod, endDate, {
                 gasLimit: 2700000
             }));
         });
@@ -164,7 +164,7 @@ describe('Voting Contract', function () {
                 '0x4d6f766965340000000000000000000000000000000000000000000000000000',
                 '0x4d6f766965350000000000000000000000000000000000000000000000000000'
             ];
-            await assert.revert(votingContract.createProposal(LESS_MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await assert.revert(votingContract.createRound(LESS_MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             }));
         });
@@ -180,7 +180,7 @@ describe('Voting Contract', function () {
                 accounts[6].signer.address,
             ];
 
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MORE_MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await assert.revert(votingContract.createRound(MOVIE_NAMES, MORE_MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             }));
         });
@@ -195,7 +195,7 @@ describe('Voting Contract', function () {
                 MILLION_DAI.mul('5'),
                 MILLION_DAI.mul('6')
             ];
-            await assert.revert(votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MORE_MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await assert.revert(votingContract.createRound(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MORE_MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             }));
         });
@@ -235,7 +235,7 @@ describe('Voting Contract', function () {
             await mogulDAIInstance.mint(OWNER.address, MILLION_DAI.mul('5'));
             await mogulDAIInstance.approve(votingContract.contractAddress, MILLION_DAI.mul('5'));
 
-            await votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await votingContract.createRound(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             });
 
@@ -338,7 +338,7 @@ describe('Voting Contract', function () {
             await mogulDAIInstance.mint(OWNER.address, MILLION_DAI.mul('5'));
             await mogulDAIInstance.approve(votingContract.contractAddress, MILLION_DAI.mul('5'));
 
-            await votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await votingContract.createRound(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             });
 
@@ -411,7 +411,7 @@ describe('Voting Contract', function () {
             await mogulDAIInstance.mint(OWNER.address, MILLION_DAI.mul('5'));
             await mogulDAIInstance.approve(votingContract.contractAddress, MILLION_DAI.mul('5'));
 
-            await votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await votingContract.createRound(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             });
 
@@ -474,7 +474,7 @@ describe('Voting Contract', function () {
             await mogulDAIInstance.mint(OWNER.address, MILLION_DAI.mul('5'));
             await mogulDAIInstance.approve(votingContract.contractAddress, MILLION_DAI.mul('5'));
 
-            await votingContract.createProposal(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
+            await votingContract.createRound(MOVIE_NAMES, MOVIE_SPONSORSHIP_RECEIVER, MOVIE_REQUESTED_AMOUNT, startDate, endDate, {
                 gasLimit: 2700000
             });
 
