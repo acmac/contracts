@@ -426,25 +426,13 @@ describe('Voting Contract', function () {
             await votingContract.from(INVESTOR.address).vote(0);
         });
 
-        it('Should revoke vote if one transfer his mogul tokens', async () => {
+        it('Should revoke vote if one sell mogul tokens', async () => {
+            let investorMglTokens = await mogulTokenContract.balanceOf(INVESTOR.address);
 
-            await mogulTokenContract.from(INVESTOR.address).transfer(OWNER.address, ONE_ETH);
-
-            let votes = await votingContract.getVotersVotesInfo(0, 0, INVESTOR.address);
-            let voteInfo = await votingContract.getVoteInfo(0, INVESTOR.address);
-            let roundInfo = await votingContract.getProposalInfo(0, 0);
-
-            assert(votes.eq(0));
-            assert.strictEqual(voteInfo, 0);
-            // roundInfo[2] => proposal total votes
-            assert(roundInfo[1].eq(0));
-
-        });
-
-        it('Should revoke vote if one transferFrom mogul tokens', async () => {
-            await mogulTokenContract.from(INVESTOR.address).approve(OWNER.address, ONE_ETH);
-
-            await mogulTokenContract.from(OWNER.address).transferFrom(INVESTOR.address, OWNER.address, ONE_ETH);
+            await mogulTokenContract.from(INVESTOR.address).approve(mogulOrganisationInstance.contractAddress, investorMglTokens);
+            await mogulOrganisationInstance.from(INVESTOR.address).sell(investorMglTokens, {
+                gasPrice: MAX_GAS_PRICE
+            });
 
             let votes = await votingContract.getVotersVotesInfo(0, 0, INVESTOR.address);
             let voteInfo = await votingContract.getVoteInfo(0, INVESTOR.address);
@@ -452,13 +440,31 @@ describe('Voting Contract', function () {
 
             assert(votes.eq(0));
             assert.strictEqual(voteInfo, 0);
-            // roundInfo[2] => proposal total votes
             assert(roundInfo[1].eq(0));
 
         });
 
-        it('Should revert if other than token contract tries to revoke vote', async () => {
+        it('Should revoke vote if one call transferFrom', async () => {
+            let investorMglTokens = await mogulTokenContract.balanceOf(INVESTOR.address);
+
+            await mogulTokenContract.from(INVESTOR.address).approve(OWNER.address, investorMglTokens);
+            await mogulTokenContract.from(OWNER.address).transferFrom(INVESTOR.address, OWNER.address, investorMglTokens);
+
+            let votes = await votingContract.getVotersVotesInfo(0, 0, INVESTOR.address);
+            let voteInfo = await votingContract.getVoteInfo(0, INVESTOR.address);
+            let roundInfo = await votingContract.getProposalInfo(0, 0);
+
+            assert(votes.eq(0));
+            assert.strictEqual(voteInfo, 0);
+            assert(roundInfo[1].eq(0));
+        });
+
+        it('Should revert if other than token contract tries to call onTransfer', async () => {
             await assert.revert(votingContract.onTransfer(INVESTOR.address, OWNER.address, 0));
+        });
+
+        it('Should revert if other than token contract tries to call onBurn', async () => {
+            await assert.revert(votingContract.onBurn(INVESTOR.address, 0));
         });
 
     });

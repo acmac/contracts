@@ -238,14 +238,14 @@ contract MogulOrganisation is Whitelisting, MovementNotifier {
     /*
     * @dev function onTransfer Token movement notifier implementation
     */
-    function onTransfer(address from, address to, uint256 value) public {
+    function onTransfer(address from, address to, uint256 value) external {
         require(whiteList[to]);
     }
     
     /*
     * @dev onBurn onTransfer Token movement notifier implementation
     */
-    function onBurn(address from, uint256 value) public {
+    function onBurn(address from, uint256 value) external {
         require(whiteList[from]);
     }
     
