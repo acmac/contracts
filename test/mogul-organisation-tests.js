@@ -148,20 +148,18 @@ describe('Mogul Organisation Contract', function () {
                 assert.strictEqual(adminAddress, OWNER.address, "mogul admin is not set correctly");
             });
 
-            it('Should change mogul organisation max gas price', async () => {
-                const NEW_PRICE = 60;
-                await mogulOrganisationInstance.setMaxGasPrice(NEW_PRICE);
-
-                let newPrice = await mogulOrganisationInstance.maxGasPrice();
-
-                assert.strictEqual(newPrice, NEW_PRICE, "gas rice was not changed correctly");
-            });
-
             it('Should change mogul organisation admin', async () => {
                 await mogulOrganisationInstance.setMogulOrgAdminAddress(INVESTOR.address);
                 const newAdminAddress = await mogulOrganisationInstance.mogulOrgAdmin();
 
                 assert.strictEqual(newAdminAddress, INVESTOR.address, "mogul admin is not changed correctly");
+            });
+
+            it('Should change max gas price', async () => {
+                const NEW_PRICE = 60;
+                await mogulOrganisationInstance.setMaxGasPrice(NEW_PRICE);
+                let newGasPrice = await mogulOrganisationInstance.maxGasPrice();
+                assert.strictEqual(newGasPrice, NEW_PRICE, "Gas prise was not changed correctly");
             });
 
             it('Should revert if not admin tries to change max gas price', async () => {
@@ -327,7 +325,7 @@ describe('Mogul Organisation Contract', function () {
 
             it('Should let whitelister to manual whitelist user', async () => {
                 const newWhiteListed = accounts[5].signer;
-                await mogulOrganisationInstance.from(OWNER).setWhitelisted(newWhiteListed.address, true);
+                await mogulOrganisationInstance.setWhitelisted(newWhiteListed.address, true);
 
                 const isWhitelisted = await mogulOrganisationInstance.whiteList(newWhiteListed.address);
                 assert.ok(isWhitelisted);
