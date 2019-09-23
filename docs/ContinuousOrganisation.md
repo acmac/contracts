@@ -1,4 +1,4 @@
-# Mogul Studios Continuous Organization
+# Mogul Productions Continuous Organization
 
 ## Summary
 The Continuous Organization smart contract system of Mogul Productions consists of several contracts. Main one of them is MogulOrganisation.sol defining the logic of the continuous organisation. In addition to Mogul Organisation, there are couple more contracts that deal with the complex mathematics of the CO formulas. In order to ensure the accuracy (and the feasibility of implementation of the formula) the actual formulas are written in vyper.
